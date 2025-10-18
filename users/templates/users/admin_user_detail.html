@@ -1,0 +1,360 @@
+{% extends 'forum/base.html' %}
+{% load static %}
+
+{% block content %}
+<div class="row">
+    <div class="col-12">
+        <div class="d-flex justify-content-between align-items-center mb-4">
+            <h2>
+                <i class="bi bi-person-gear"></i> Управление пользователем: {{ target_user.username }}
+            </h2>
+            <a href="{% url 'admin_users' %}" class="btn btn-outline-secondary">
+                <i class="bi bi-arrow-left"></i> Назад к списку
+            </a>
+        </div>
+
+        <!-- User Info Card -->
+        <div class="card mb-4">
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-3 text-center">
+                        {% if target_user.userprofile.avatar %}
+                            <img src="{{ target_user.userprofile.avatar.url }}" 
+                                 alt="Аватар {{ target_user.username }}" 
+                                 class="rounded-circle mb-3" 
+                                 style="width: 120px; height: 120px; object-fit: cover;">
+                        {% else %}
+                            <div class="rounded-circle bg-secondary d-flex align-items-center justify-content-center mb-3 mx-auto" 
+                                 style="width: 120px; height: 120px;">
+                                <i class="bi bi-person-fill text-white" style="font-size: 3rem;"></i>
+                            </div>
+                        {% endif %}
+                        
+                        <h4>{{ target_user.get_full_name|default:target_user.username }}</h4>
+                        <p class="text-muted">@{{ target_user.username }}</p>
+                        
+                        <div class="d-grid gap-2">
+                            {% if target_user.userprofile.is_banned %}
+                                <button class="btn btn-success unban-user-btn" data-user-id="{{ target_user.id }}">
+                                    <i class="bi bi-unlock"></i> Разбанить
+                                </button>
+                            {% else %}
+                                <button class="btn btn-warning ban-user-btn" data-user-id="{{ target_user.id }}">
+                                    <i class="bi bi-lock"></i> Забанить
+                                </button>
+                            {% endif %}
+                            
+                            <button class="btn btn-outline-warning toggle-admin-btn" 
+                                    data-user-id="{{ target_user.id }}" 
+                                    data-current-admin="{{ target_user.userprofile.is_admin }}">
+                                <i class="bi bi-shield"></i> 
+                                {% if target_user.userprofile.is_admin %}Снять админ{% else %}Сделать админом{% endif %}
+                            </button>
+                            
+                            <button class="btn btn-outline-danger delete-user-btn" 
+                                    data-user-id="{{ target_user.id }}" 
+                                    data-username="{{ target_user.username }}">
+                                <i class="bi bi-trash"></i> Удалить пользователя
+                            </button>
+                        </div>
+                    </div>
+                    
+                    <div class="col-md-9">
+                        <div class="row">
+                            <div class="col-md-6">
+                                <h6>Основная информация</h6>
+                                <table class="table table-sm">
+                                    <tr>
+                                        <td><strong>Email:</strong></td>
+                                        <td>{{ target_user.email }}</td>
+                                    </tr>
+                                    <tr>
+                                        <td><strong>Имя:</strong></td>
+                                        <td>{{ target_user.first_name|default:"Не указано" }}</td>
+                                    </tr>
+                                    <tr>
+                                        <td><strong>Фамилия:</strong></td>
+                                        <td>{{ target_user.last_name|default:"Не указано" }}</td>
+                                    </tr>
+                                    <tr>
+                                        <td><strong>Дата регистрации:</strong></td>
+                                        <td>{{ target_user.date_joined|date:"d.m.Y H:i" }}</td>
+                                    </tr>
+                                    <tr>
+                                        <td><strong>Последний вход:</strong></td>
+                                        <td>{{ target_user.last_login|date:"d.m.Y H:i"|default:"Никогда" }}</td>
+                                    </tr>
+                                </table>
+                            </div>
+                            
+                            <div class="col-md-6">
+                                <h6>Статус</h6>
+                                <table class="table table-sm">
+                                    <tr>
+                                        <td><strong>Активен:</strong></td>
+                                        <td>
+                                            {% if target_user.is_active %}
+                                                <span class="badge bg-success">Да</span>
+                                            {% else %}
+                                                <span class="badge bg-danger">Нет</span>
+                                            {% endif %}
+                                        </td>
+                                    </tr>
+                                    <tr>
+                                        <td><strong>Администратор:</strong></td>
+                                        <td>
+                                            {% if target_user.userprofile.is_admin %}
+                                                <span class="badge bg-primary">Да</span>
+                                            {% else %}
+                                                <span class="badge bg-secondary">Нет</span>
+                                            {% endif %}
+                                        </td>
+                                    </tr>
+                                    <tr>
+                                        <td><strong>Забанен:</strong></td>
+                                        <td>
+                                            {% if target_user.userprofile.is_banned %}
+                                                <span class="badge bg-warning">Да</span>
+                                                {% if target_user.userprofile.ban_reason %}
+                                                    <br><small class="text-muted">{{ target_user.userprofile.ban_reason }}</small>
+                                                {% endif %}
+                                            {% else %}
+                                                <span class="badge bg-success">Нет</span>
+                                            {% endif %}
+                                        </td>
+                                    </tr>
+                                </table>
+                            </div>
+                        </div>
+                        
+                        {% if target_user.userprofile.bio %}
+                        <div class="mt-3">
+                            <h6>О себе</h6>
+                            <p class="text-muted">{{ target_user.userprofile.bio }}</p>
+                        </div>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- User Posts -->
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0">
+                    <i class="bi bi-chat-dots"></i> Темы пользователя ({{ user_posts.count }})
+                </h5>
+            </div>
+            <div class="card-body">
+                {% if user_posts %}
+                    {% for post in user_posts %}
+                        <div class="d-flex align-items-center mb-3 p-3 border rounded">
+                            <div class="flex-grow-1">
+                                <h6 class="mb-1">
+                                    <a href="{% url 'thread-detail' post.id %}" class="text-decoration-none">
+                                        {{ post.title }}
+                                    </a>
+                                </h6>
+                                <small class="text-muted">
+                                    <i class="bi bi-calendar"></i> {{ post.created_at|date:"d.m.Y H:i" }}
+                                    <i class="bi bi-chat ms-3"></i> {{ post.comments.count }} комментариев
+                                    <i class="bi bi-heart ms-3"></i> {{ post.likes.count }} лайков
+                                </small>
+                            </div>
+                            <div class="btn-group" role="group">
+                                <a href="{% url 'thread-detail' post.id %}" class="btn btn-outline-info btn-sm">
+                                    <i class="bi bi-eye"></i>
+                                </a>
+                                <button class="btn btn-outline-danger btn-sm admin-delete-post-btn" 
+                                        data-post-id="{{ post.id }}" 
+                                        data-post-title="{{ post.title }}">
+                                    <i class="bi bi-trash"></i>
+                                </button>
+                            </div>
+                        </div>
+                    {% endfor %}
+                {% else %}
+                    <div class="text-center py-4">
+                        <i class="bi bi-chat-dots text-muted" style="font-size: 3rem;"></i>
+                        <p class="text-muted mt-2">Пользователь не создавал тем</p>
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Ban User Modal -->
+<div class="modal fade" id="banUserModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Забанить пользователя</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <form id="banUserForm">
+                    <div class="mb-3">
+                        <label for="banReason" class="form-label">Причина бана</label>
+                        <textarea class="form-control" id="banReason" name="ban_reason" rows="3" 
+                                  placeholder="Укажите причину бана..."></textarea>
+                    </div>
+                    <div class="mb-3">
+                        <label for="banDuration" class="form-label">Длительность бана</label>
+                        <select class="form-select" id="banDuration" name="ban_duration">
+                            <option value="1">1 день</option>
+                            <option value="7">1 неделя</option>
+                            <option value="30">1 месяц</option>
+                            <option value="90">3 месяца</option>
+                            <option value="365">1 год</option>
+                            <option value="permanent">Навсегда</option>
+                        </select>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Отмена</button>
+                <button type="button" class="btn btn-warning" id="confirmBanBtn">Забанить</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    let currentUserId = null;
+    
+    // Ban user
+    document.querySelectorAll('.ban-user-btn').forEach(btn => {
+        btn.addEventListener('click', function() {
+            currentUserId = this.dataset.userId;
+            const modal = new bootstrap.Modal(document.getElementById('banUserModal'));
+            modal.show();
+        });
+    });
+    
+    // Confirm ban
+    document.getElementById('confirmBanBtn').addEventListener('click', function() {
+        if (currentUserId) {
+            const form = document.getElementById('banUserForm');
+            const formData = new FormData(form);
+            const data = {
+                ban_reason: formData.get('ban_reason'),
+                ban_duration: formData.get('ban_duration')
+            };
+            
+            fetch(`/users/admin/users/${currentUserId}/ban/`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value
+                },
+                body: JSON.stringify(data)
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    location.reload();
+                } else {
+                    alert('Ошибка: ' + data.error);
+                }
+            });
+        }
+    });
+    
+    // Unban user
+    document.querySelectorAll('.unban-user-btn').forEach(btn => {
+        btn.addEventListener('click', function() {
+            if (confirm('Разбанить пользователя?')) {
+                const userId = this.dataset.userId;
+                fetch(`/users/admin/users/${userId}/unban/`, {
+                    method: 'POST',
+                    headers: {
+                        'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value
+                    }
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        location.reload();
+                    } else {
+                        alert('Ошибка: ' + data.error);
+                    }
+                });
+            }
+        });
+    });
+    
+    // Toggle admin status
+    document.querySelectorAll('.toggle-admin-btn').forEach(btn => {
+        btn.addEventListener('click', function() {
+            if (confirm('Изменить права администратора?')) {
+                const userId = this.dataset.userId;
+                fetch(`/users/admin/users/${userId}/toggle-admin/`, {
+                    method: 'POST',
+                    headers: {
+                        'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value
+                    }
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        location.reload();
+                    } else {
+                        alert('Ошибка: ' + data.error);
+                    }
+                });
+            }
+        });
+    });
+    
+    // Delete user
+    document.querySelectorAll('.delete-user-btn').forEach(btn => {
+        btn.addEventListener('click', function() {
+            const username = this.dataset.username;
+            if (confirm(`Удалить пользователя "${username}"? Это действие нельзя отменить!`)) {
+                const userId = this.dataset.userId;
+                fetch(`/users/admin/users/${userId}/delete/`, {
+                    method: 'POST',
+                    headers: {
+                        'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value
+                    }
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        window.location.href = '/users/admin/users/';
+                    } else {
+                        alert('Ошибка: ' + data.error);
+                    }
+                });
+            }
+        });
+    });
+    
+    // Delete post
+    document.querySelectorAll('.admin-delete-post-btn').forEach(btn => {
+        btn.addEventListener('click', function() {
+            const postTitle = this.dataset.postTitle;
+            if (confirm(`Удалить пост "${postTitle}"? Это действие нельзя отменить!`)) {
+                const postId = this.dataset.postId;
+                fetch(`/users/admin/posts/${postId}/delete/`, {
+                    method: 'POST',
+                    headers: {
+                        'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value
+                    }
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        location.reload();
+                    } else {
+                        alert('Ошибка: ' + data.error);
+                    }
+                });
+            }
+        });
+    });
+});
+</script>
+{% endblock %}

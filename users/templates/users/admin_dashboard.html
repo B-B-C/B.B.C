@@ -1,0 +1,199 @@
+{% extends 'forum/base.html' %}
+{% load static %}
+
+{% block title %}Админ панель - B.B.C Forum{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-12">
+        <div class="d-flex justify-content-between align-items-center mb-4">
+            <h2>
+                <i class="bi bi-shield-check"></i> Админ панель
+            </h2>
+            <div class="d-flex gap-2">
+                <a href="{% url 'admin_users' %}" class="btn btn-outline-primary">
+                    <i class="bi bi-people"></i> Управление пользователями
+                </a>
+                <a href="{% url 'admin_posts' %}" class="btn btn-outline-primary">
+                    <i class="bi bi-file-text"></i> Управление темами
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Statistics Cards -->
+<div class="row mb-4">
+    <div class="col-md-3">
+        <div class="card stats-card">
+            <div class="card-body text-center">
+                <i class="bi bi-people text-primary" style="font-size: 2rem;"></i>
+                <h4 class="mt-2">{{ stats.total_users }}</h4>
+                <p class="text-muted mb-0">Пользователей</p>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card stats-card">
+            <div class="card-body text-center">
+                <i class="bi bi-file-text text-success" style="font-size: 2rem;"></i>
+                <h4 class="mt-2">{{ stats.total_posts }}</h4>
+                <p class="text-muted mb-0">Тем</p>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card stats-card">
+            <div class="card-body text-center">
+                <i class="bi bi-chat-dots text-info" style="font-size: 2rem;"></i>
+                <h4 class="mt-2">{{ stats.total_comments }}</h4>
+                <p class="text-muted mb-0">Комментариев</p>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card stats-card">
+            <div class="card-body text-center">
+                <i class="bi bi-shield-check text-warning" style="font-size: 2rem;"></i>
+                <h4 class="mt-2">{{ stats.admin_users }}</h4>
+                <p class="text-muted mb-0">Админов</p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row">
+    <!-- Recent Posts -->
+    <div class="col-lg-6">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0">
+                    <i class="bi bi-file-text"></i> Последние темы
+                </h5>
+            </div>
+            <div class="card-body">
+                {% if recent_posts %}
+                    {% for post in recent_posts %}
+                        <div class="d-flex justify-content-between align-items-center mb-3 pb-3 border-bottom">
+                            <div>
+                                <h6 class="mb-1">
+                                    <a href="{% url 'thread-detail' post.id %}" class="text-decoration-none">
+                                        {{ post.title|truncatechars:50 }}
+                                    </a>
+                                </h6>
+                                <small class="text-muted">
+                                    <i class="bi bi-person"></i> {{ post.author.username }} | 
+                                    <i class="bi bi-calendar"></i> {{ post.created_at|date:"d.m.Y H:i" }}
+                                </small>
+                            </div>
+                            <div class="text-end">
+                                <span class="badge bg-primary">{{ post.likes.count }}</span>
+                                <small class="text-muted d-block">лайков</small>
+                            </div>
+                        </div>
+                    {% endfor %}
+                    <div class="text-center">
+                        <a href="{% url 'admin_posts' %}" class="btn btn-outline-primary">
+                            <i class="bi bi-eye"></i> Управление темами
+                        </a>
+                    </div>
+                {% else %}
+                    <div class="text-center text-muted">
+                        <i class="bi bi-file-text" style="font-size: 3rem;"></i>
+                        <p class="mt-2">Нет тем</p>
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+    
+    <!-- Recent Users -->
+    <div class="col-lg-6">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0">
+                    <i class="bi bi-people"></i> Последние пользователи
+                </h5>
+            </div>
+            <div class="card-body">
+                {% if recent_users %}
+                    {% for user in recent_users %}
+                        <div class="d-flex justify-content-between align-items-center mb-3 pb-3 border-bottom">
+                            <div class="d-flex align-items-center">
+                                {% if user.userprofile.avatar %}
+                                    <img src="{{ user.userprofile.avatar.url }}" alt="Avatar" class="avatar me-3">
+                                {% else %}
+                                    <div class="avatar me-3 bg-secondary d-flex align-items-center justify-content-center">
+                                        <i class="bi bi-person"></i>
+                                    </div>
+                                {% endif %}
+                                <div>
+                                    <h6 class="mb-1">{{ user.username }}</h6>
+                                    <small class="text-muted">
+                                        <i class="bi bi-calendar"></i> {{ user.date_joined|date:"d.m.Y H:i" }}
+                                    </small>
+                                </div>
+                            </div>
+                            <div class="text-end">
+                                {% if user.userprofile.is_admin %}
+                                    <span class="badge bg-warning">Админ</span>
+                                {% else %}
+                                    <span class="badge bg-success">Пользователь</span>
+                                {% endif %}
+                            </div>
+                        </div>
+                    {% endfor %}
+                    <div class="text-center">
+                        <a href="{% url 'admin_users' %}" class="btn btn-outline-primary">
+                            <i class="bi bi-eye"></i> Управление пользователями
+                        </a>
+                    </div>
+                {% else %}
+                    <div class="text-center text-muted">
+                        <i class="bi bi-people" style="font-size: 3rem;"></i>
+                        <p class="mt-2">Нет пользователей</p>
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Quick Actions -->
+<div class="row mt-4">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0">
+                    <i class="bi bi-lightning"></i> Быстрые действия
+                </h5>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-3">
+                        <a href="{% url 'admin_users' %}" class="btn btn-outline-primary w-100 mb-2">
+                            <i class="bi bi-people"></i> Пользователи
+                        </a>
+                    </div>
+                    <div class="col-md-3">
+                        <a href="{% url 'admin_posts' %}" class="btn btn-outline-success w-100 mb-2">
+                            <i class="bi bi-file-text"></i> Темы
+                        </a>
+                    </div>
+                    <div class="col-md-3">
+                        <a href="{% url 'forum-index' %}" class="btn btn-outline-info w-100 mb-2">
+                            <i class="bi bi-house"></i> На главную
+                        </a>
+                    </div>
+                    <div class="col-md-3">
+                        <a href="/admin/" class="btn btn-outline-warning w-100 mb-2" target="_blank">
+                            <i class="bi bi-gear"></i> Django Admin
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+

@@ -1,0 +1,193 @@
+{% extends 'forum/base.html' %}
+{% load static %}
+
+{% block title %}Личный дашборд - B.B.C Forum{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-12">
+        <div class="d-flex justify-content-between align-items-center mb-4">
+            <h2>
+                <i class="bi bi-speedometer2"></i> Личный дашборд
+            </h2>
+            <div class="d-flex gap-2">
+                <a href="{% url 'edit_profile' %}" class="btn btn-outline-primary">
+                    <i class="bi bi-gear"></i> Настройки
+                </a>
+                <a href="{% url 'new-post' %}" class="btn btn-primary">
+                    <i class="bi bi-plus-circle"></i> Новая тема
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Statistics Cards -->
+<div class="row mb-4">
+    <div class="col-md-3">
+        <div class="card stats-card">
+            <div class="card-body text-center">
+                <i class="bi bi-file-text text-primary" style="font-size: 2rem;"></i>
+                <h4 class="mt-2">{{ stats.total_posts }}</h4>
+                <p class="text-muted mb-0">Тем</p>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card stats-card">
+            <div class="card-body text-center">
+                <i class="bi bi-chat-dots text-success" style="font-size: 2rem;"></i>
+                <h4 class="mt-2">{{ stats.total_comments }}</h4>
+                <p class="text-muted mb-0">Комментариев</p>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card stats-card">
+            <div class="card-body text-center">
+                <i class="bi bi-heart text-danger" style="font-size: 2rem;"></i>
+                <h4 class="mt-2">{{ stats.total_likes_received }}</h4>
+                <p class="text-muted mb-0">Лайков получено</p>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card stats-card">
+            <div class="card-body text-center">
+                <i class="bi bi-hand-thumbs-up text-info" style="font-size: 2rem;"></i>
+                <h4 class="mt-2">{{ stats.total_likes_given }}</h4>
+                <p class="text-muted mb-0">Лайков поставлено</p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row">
+    <!-- Recent Posts -->
+    <div class="col-lg-6">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0">
+                    <i class="bi bi-file-text"></i> Последние темы
+                </h5>
+            </div>
+            <div class="card-body">
+                {% if user_posts %}
+                    {% for post in user_posts %}
+                        <div class="d-flex justify-content-between align-items-center mb-3 pb-3 border-bottom">
+                            <div>
+                                <h6 class="mb-1">
+                                    <a href="{% url 'thread-detail' post.id %}" class="text-decoration-none">
+                                        {{ post.title|truncatechars:50 }}
+                                    </a>
+                                </h6>
+                                <small class="text-muted">
+                                    <i class="bi bi-calendar"></i> {{ post.created_at|date:"d.m.Y H:i" }}
+                                </small>
+                            </div>
+                            <div class="text-end">
+                                <span class="badge bg-primary">{{ post.likes.count }}</span>
+                                <small class="text-muted d-block">лайков</small>
+                            </div>
+                        </div>
+                    {% endfor %}
+                    <div class="text-center">
+                        <a href="{% url 'profile' %}" class="btn btn-outline-primary">
+                            <i class="bi bi-eye"></i> Все темы
+                        </a>
+                    </div>
+                {% else %}
+                    <div class="text-center text-muted">
+                        <i class="bi bi-file-text" style="font-size: 3rem;"></i>
+                        <p class="mt-2">У вас пока нет тем</p>
+                        <a href="{% url 'new-post' %}" class="btn btn-primary">
+                            <i class="bi bi-plus-circle"></i> Создать первую тему
+                        </a>
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+    
+    <!-- Recent Comments -->
+    <div class="col-lg-6">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0">
+                    <i class="bi bi-chat-dots"></i> Последние комментарии
+                </h5>
+            </div>
+            <div class="card-body">
+                {% if user_comments %}
+                    {% for comment in user_comments %}
+                        <div class="d-flex justify-content-between align-items-center mb-3 pb-3 border-bottom">
+                            <div>
+                                <h6 class="mb-1">
+                                    <a href="{% url 'thread-detail' comment.post.id %}" class="text-decoration-none">
+                                        {{ comment.post.title|truncatechars:30 }}
+                                    </a>
+                                </h6>
+                                <p class="mb-1 text-muted">{{ comment.content|truncatechars:50 }}</p>
+                                <small class="text-muted">
+                                    <i class="bi bi-calendar"></i> {{ comment.created_at|date:"d.m.Y H:i" }}
+                                </small>
+                            </div>
+                        </div>
+                    {% endfor %}
+                    <div class="text-center">
+                        <a href="{% url 'profile' %}" class="btn btn-outline-primary">
+                            <i class="bi bi-eye"></i> Все комментарии
+                        </a>
+                    </div>
+                {% else %}
+                    <div class="text-center text-muted">
+                        <i class="bi bi-chat-dots" style="font-size: 3rem;"></i>
+                        <p class="mt-2">У вас пока нет комментариев</p>
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Liked Posts -->
+{% if liked_posts %}
+<div class="row mt-4">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0">
+                    <i class="bi bi-heart"></i> Понравившиеся темы
+                </h5>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    {% for post in liked_posts %}
+                        <div class="col-md-6 mb-3">
+                            <div class="card glass-effect">
+                                <div class="card-body">
+                                    <h6 class="card-title">
+                                        <a href="{% url 'thread-detail' post.id %}" class="text-decoration-none">
+                                            {{ post.title|truncatechars:40 }}
+                                        </a>
+                                    </h6>
+                                    <p class="card-text text-muted small">
+                                        Автор: {{ post.author.username }} | 
+                                        {{ post.created_at|date:"d.m.Y" }}
+                                    </p>
+                                    <div class="d-flex justify-content-between align-items-center">
+                                        <span class="badge bg-primary">{{ post.likes.count }} лайков</span>
+                                        <span class="badge bg-secondary">{{ post.comments.count }} комментариев</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endif %}
+{% endblock %}
+

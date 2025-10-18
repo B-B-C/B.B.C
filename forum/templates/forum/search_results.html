@@ -1,0 +1,23 @@
+{% extends 'forum/base.html' %}
+
+{% block content %}
+    <h2>Результаты поиска для: "{{ query }}"</h2>
+
+    {% if results %}
+        <div class="search-results">
+            <ul>
+                {% for post in results %}
+                    <li>
+                        <a href="{% url 'thread-detail' post.id %}">
+                            <h3>{{ post.title }}</h3>
+                            <p>{{ post.body|slice:":200" }}...</p>
+                            <small>Опубликовано {{ post.author }} в {{ post.created_at }}</small>
+                        </a>
+                    </li>
+                {% endfor %}
+            </ul>
+        </div>
+    {% else %}
+        <p>Ничего не найдено.</p>
+    {% endif %}
+{% endblock %}

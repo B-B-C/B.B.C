@@ -57,6 +57,21 @@
                         <div class="form-text">Выберите изображение для вашей темы. Поддерживаются форматы: JPG, PNG, GIF</div>
                     </div>
                     
+                    <div class="mb-3">
+                        <label for="{{ form.video.id_for_label }}" class="form-label">
+                            <i class="bi bi-camera-video"></i> Видео (необязательно)
+                        </label>
+                        {{ form.video }}
+                        {% if form.video.errors %}
+                            <div class="text-danger">
+                                {% for error in form.video.errors %}
+                                    <small>{{ error }}</small>
+                                {% endfor %}
+                            </div>
+                        {% endif %}
+                        <div class="form-text">Выберите видео для вашей темы. Поддерживаются форматы: MP4, WebM, OGG</div>
+                    </div>
+                    
                     <div class="d-flex justify-content-between">
                         <a href="{% url 'forum-index' %}" class="btn btn-secondary">
                             <i class="bi bi-arrow-left"></i> Отмена

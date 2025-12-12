@@ -1,282 +1,247 @@
-# B.B.C Forum - Enhanced Django Project
+.B.C Forum — Расширенный Django-проект
 
-A modern, secure Django forum application with comprehensive user management, JWT authentication, and admin dashboard.
+Современное, безопасное форумное веб-приложение на Django с полной системой управления пользователями, JWT-аутентификацией и кастомной админ-панелью.
 
-## 🚀 Features
+🚀 Основные возможности
+🔐 Безопасность
 
-### Security
-- **Password Hashing**: Argon2, PBKDF2, and BCrypt password hashers
-- **CSRF Protection**: Comprehensive CSRF protection with secure cookies
-- **XSS Protection**: Browser XSS filter and content type sniffing protection
-- **HSTS**: HTTP Strict Transport Security with preload support
-- **Secure Cookies**: HttpOnly, Secure, and SameSite cookie attributes
-- **JWT Authentication**: Secure token-based authentication
+Хэширование паролей: поддержка Argon2, PBKDF2 и BCrypt
 
-### User Management
-- **Registration Validation**: Server-side and client-side validation
-  - Email format validation
-  - Password strength requirements (8+ chars, uppercase, lowercase, numbers, special characters)
-  - Username uniqueness and format validation
-  - Password confirmation matching
-- **Profile Management**: 
-  - Avatar upload functionality
-  - Bio and personal information editing
-  - Password change with current password verification
-- **Personal Dashboard**: User activity history and statistics
+CSRF-защита: надёжная защита с безопасными cookies
 
-### Admin Features
-- **Custom Admin Dashboard**: Accessible from main site (not Django default)
-- **User Management**: View, edit, activate/deactivate users
-- **Content Management**: Manage posts and comments
-- **Admin Privileges**: Grant/revoke admin status
-- **Statistics**: Comprehensive site statistics
+XSS-защита: встроенные фильтры и безопасные заголовки
 
-### API Features
-- **JWT Endpoints**: `/api/auth/token/` and `/api/auth/token/refresh/`
-- **User Registration API**: `/api/auth/register/`
-- **Profile Management API**: `/api/auth/profile/`
-- **RESTful Design**: Full REST API with proper HTTP methods
+HSTS: строгая транспортная безопасность (HTTP Strict Transport Security)
 
-### Database & Documentation
-- **ER Diagram**: Database structure visualization
-- **Model Documentation**: Comprehensive model relationships
-- **Migration Support**: Backward-compatible database updates
+Безопасные cookies: параметры HttpOnly, Secure, SameSite
 
-### UI/UX
-- **Modern Dark Theme**: Bootstrap 5 with dark mode support
-- **Responsive Design**: Mobile-first responsive layout
-- **Crispy Forms**: Enhanced form styling with Bootstrap 5
-- **Avatar Support**: Image upload and display functionality
+JWT-аутентификация: безопасная авторизация с помощью токенов
 
-## 🛠️ Installation
+👤 Управление пользователями
 
-### Prerequisites
-- Python 3.8+
-- pip
-- Git
+Регистрация с валидацией:
 
-### Setup Instructions
+Проверка формата email
 
-1. **Clone the repository**
-```bash
+Требования к сложности пароля (8+ символов, буквы в разных регистрах, цифры, спецсимволы)
+
+Проверка уникальности имени пользователя
+
+Совпадение пароля и подтверждения
+
+Профиль пользователя:
+
+Загрузка аватара
+
+Редактирование био и личной информации
+
+Смена пароля с проверкой текущего
+
+Личный кабинет:
+
+История активности
+
+Статистика пользователя
+
+🧑‍💼 Админ-функции
+
+Кастомная админ-панель (не стандартная Django Admin)
+
+Управление пользователями: просмотр, редактирование, активация/деактивация
+
+Контент-модерация: управление постами и комментариями
+
+Выдача прав администратора
+
+Статистика сайта: графики и отчёты
+
+⚙️ API-функционал
+
+JWT-эндпоинты:
+
+/api/auth/token/ — получение токенов
+
+/api/auth/token/refresh/ — обновление токена
+
+Регистрация: /api/auth/register/
+
+Профиль: /api/auth/profile/
+
+Обновление профиля: /api/auth/profile/update/
+
+Выход: /api/auth/logout/
+
+REST-архитектура: корректное использование методов HTTP
+
+🧩 База данных и документация
+
+ER-диаграмма структуры базы данных
+
+Документация моделей с описанием связей
+
+Поддержка миграций с обратной совместимостью
+
+🎨 Интерфейс (UI/UX)
+
+Современная тёмная тема (Bootstrap 5)
+
+Адаптивный дизайн (под мобильные устройства)
+
+Crispy Forms с Bootstrap 5
+
+Поддержка аватаров (загрузка и отображение)
+
+🛠️ Установка и настройка
+Требования
+
+Python 3.8+
+
+pip
+
+Git
+
+Инструкция по установке
+
+Клонируйте репозиторий
+
 git clone <repository-url>
-   cd B.B.C-main
-```
+cd B.B.C-main
 
-2. **Create virtual environment**
-```bash
+
+Создайте виртуальное окружение
+
 python -m venv venv
-   # On Windows
-   venv\Scripts\activate
-   # On macOS/Linux
-   source venv/bin/activate
-   ```
+# Windows
+venv\Scripts\activate
+# macOS/Linux
+source venv/bin/activate
 
-3. **Install dependencies**
-```bash
+
+Установите зависимости
+
 pip install -r requirements.txt
-```
 
-4. **Environment variables**
-   Create a `.env` file in the project root:
-   ```env
-   SECRET_KEY=your-secret-key-here
-   DEBUG=True
-   DATABASE_URL=sqlite:///db.sqlite3
-   ```
 
-5. **Database setup**
-```bash
-   python manage.py makemigrations
+Создайте файл .env
+
+SECRET_KEY=ваш-секретный-ключ
+DEBUG=True
+DATABASE_URL=sqlite:///db.sqlite3
+
+
+Настройте базу данных
+
+python manage.py makemigrations
 python manage.py migrate
-```
 
-6. **Create superuser**
-```bash
+
+Создайте суперпользователя
+
 python manage.py createsuperuser
-```
 
-7. **Create media directories**
-   ```bash
-   mkdir media
-   mkdir media/avatars
-   ```
 
-8. **Run development server**
-```bash
+Создайте директории для медиа
+
+mkdir media
+mkdir media/avatars
+
+
+Запустите сервер
+
 python manage.py runserver
-```
 
-## 📁 Project Structure
-
-```
+📁 Структура проекта
 B.B.C-main/
-├── forum/                    # Main forum application
-│   ├── models.py            # Post and Comment models
-│   ├── views.py             # Forum views
-│   ├── templates/           # Forum templates
-│   └── api_views.py         # Forum API endpoints
-├── users/                   # User management application
-│   ├── models.py            # UserProfile model
-│   ├── views.py             # User views
-│   ├── admin_views.py       # Custom admin views
-│   ├── forms.py             # Enhanced forms with validation
-│   ├── serializers.py       # API serializers
-│   └── templates/           # User templates
-├── forum_project/           # Django project settings
-│   ├── settings.py          # Enhanced security settings
-│   └── urls.py              # URL configuration
-├── media/                   # User uploaded files
-│   └── avatars/             # User avatars
-├── static/                  # Static files
-├── requirements.txt         # Python dependencies
-├── .gitignore              # Git ignore rules
-└── README.md               # This file
-```
+├── forum/                    # Приложение форума
+│   ├── models.py
+│   ├── views.py
+│   ├── api_views.py
+│   └── templates/
+├── users/                    # Управление пользователями
+│   ├── models.py
+│   ├── views.py
+│   ├── admin_views.py
+│   ├── forms.py
+│   ├── serializers.py
+│   └── templates/
+├── forum_project/            # Основные настройки Django
+│   ├── settings.py
+│   └── urls.py
+├── media/avatars/            # Загрузка аватаров
+├── static/                   # Статические файлы
+├── requirements.txt
+└── README.md
 
-## 🔧 Configuration
+🔧 Настройки безопасности
 
-### Security Settings
-The project includes comprehensive security settings in `settings.py`:
+В settings.py реализованы:
 
-- **Password Hashing**: Multiple hashers for security
-- **CSRF Protection**: Secure cookie settings
-- **XSS Protection**: Browser security headers
-- **HSTS**: Transport security
-- **Cookie Security**: HttpOnly, Secure, SameSite attributes
+Защита от XSS и CSRF
 
-### JWT Configuration
-JWT tokens are configured with:
-- **Access Token**: 60 minutes lifetime
-- **Refresh Token**: 7 days lifetime
-- **Token Rotation**: Automatic refresh token rotation
-- **Blacklisting**: Token blacklisting on logout
+Безопасные cookies
 
-## 🚀 API Endpoints
+HSTS и корректные заголовки
 
-### Authentication
-- `POST /api/auth/token/` - Obtain JWT tokens
-- `POST /api/auth/token/refresh/` - Refresh access token
-- `POST /api/auth/token/blacklist/` - Blacklist refresh token
+Хэширование паролей несколькими алгоритмами
 
-### User Management
-- `POST /api/auth/register/` - User registration
-- `GET /api/auth/profile/` - Get user profile
-- `PUT /api/auth/profile/update/` - Update user profile
-- `POST /api/auth/logout/` - Logout user
+🧾 JWT-настройка
 
-## 🎨 UI Components
+Время жизни access-токена — 60 мин
 
-### Templates
-- **Base Template**: Dark theme with Bootstrap 5
-- **Registration Form**: Enhanced validation and styling
-- **Profile Pages**: Modern user interface
-- **Admin Dashboard**: Comprehensive admin interface
-- **Responsive Design**: Mobile-first approach
+Время жизни refresh-токена — 7 дней
 
-### Forms
-- **User Registration**: Server-side and client-side validation
-- **Profile Editing**: Avatar upload and bio editing
-- **Password Change**: Secure password update
-- **Crispy Forms**: Bootstrap 5 integration
+Ротация токенов при обновлении
 
-## 🔒 Security Features
+Блэклист при выходе из системы
 
-### Password Requirements
-- Minimum 8 characters
-- At least one uppercase letter
-- At least one lowercase letter
-- At least one number
-- At least one special character
+📊 Админ-панель
+Возможности:
 
-### CSRF Protection
-- CSRF tokens on all forms
-- Secure cookie settings
-- Trusted origins configuration
+Управление пользователями, постами, комментариями
 
-### XSS Protection
-- Browser XSS filter
-- Content type sniffing protection
-- Secure headers configuration
+Просмотр статистики
 
-## 📊 Admin Dashboard
+Назначение и снятие прав администратора
 
-### Features
-- **User Management**: View, edit, activate/deactivate users
-- **Content Management**: Manage posts and comments
-- **Statistics**: Site-wide statistics
-- **Admin Controls**: Grant/revoke admin privileges
+Доступ:
+/users/admin/dashboard/
+(только для админов)
 
-### Access
-- Navigate to `/users/admin/dashboard/`
-- Requires admin privileges
-- Custom interface (not Django default admin)
+🗄️ Модели базы данных
 
-## 🗄️ Database
+User — пользователь (расширенная модель Django)
 
-### Models
-- **User**: Extended with UserProfile
-- **Post**: Forum posts with likes
-- **Comment**: Post comments
-- **UserProfile**: User bio, avatar, admin status
+UserProfile — профиль (аватар, био, статус)
 
-### ER Diagram
-Generate database diagram:
-```bash
+Post — пост форума (с лайками)
+
+Comment — комментарии к постам
+
+Для визуализации связей:
+
 python manage.py graph_models -a -o er_diagram.png
-```
 
-## 🚀 Deployment
-
-### Production Settings
-- Set `DEBUG=False`
-- Configure `SECRET_KEY`
-- Set up database (PostgreSQL recommended)
-- Configure static file serving
-- Set up media file serving
-
-### Environment Variables
-```env
-SECRET_KEY=your-production-secret-key
+🚀 Развёртывание в продакшн
+Настройки
+SECRET_KEY=production-secret-key
 DEBUG=False
 DATABASE_URL=postgresql://user:password@host:port/database
 ALLOWED_HOSTS=your-domain.com
-```
 
-## 🤝 Contributing
 
-1. Fork the repository
-2. Create a feature branch
-3. Make your changes
-4. Add tests if applicable
-5. Submit a pull request
+Рекомендуется использовать PostgreSQL, Gunicorn, Nginx и HTTPS.
 
-## 📝 License
+🧠 Будущие улучшения
 
-This project is licensed under the MIT License.
+Реальные уведомления в реальном времени
 
-## 🆘 Support
+Расширенный поиск
 
-For support and questions:
-- Create an issue in the repository
-- Check the documentation
-- Review the API endpoints
+Уведомления на почту
 
-## 🔄 Updates
+Вход через соцсети
 
-### Recent Updates
-- Enhanced security settings
-- JWT authentication implementation
-- Custom admin dashboard
-- User profile management
-- Avatar upload functionality
-- Modern UI with Bootstrap 5
-- Comprehensive validation
-- API endpoints for mobile apps
+Продвинутая статистика для админов
 
-### Future Enhancements
-- Real-time notifications
-- Advanced search functionality
-- Email notifications
-- Social login integration
-- Advanced admin analytics
+Хочешь, я помогу тебе сделать пошаговое руководство по созданию этого проекта (со всеми файлами Django — models.py, views.py, urls.py, serializers.py, settings.py и шаблонами)?
+Могу написать как учебный мини-курс, чтобы всё работало сразу.

@@ -1,0 +1,79 @@
+{% extends 'forum/base.html' %}
+{% load static %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-lg-10">
+        <div class="card">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <h4 class="mb-0">
+                    <i class="bi bi-envelope"></i> Мои сообщения
+                </h4>
+                <a href="{% url 'send_message' %}" class="btn btn-primary">
+                    <i class="bi bi-plus-circle"></i> Новое сообщение
+                </a>
+            </div>
+            <div class="card-body">
+                {% if conversations %}
+                    {% for conversation in conversations %}
+                        <div class="d-flex align-items-center mb-3 p-3 border rounded hover-shadow" style="cursor: pointer;" onclick="window.location.href='{% url 'conversation' conversation.user.id %}'">
+                            <div class="me-3">
+                                {% if conversation.user.userprofile.avatar %}
+                                    <img src="{{ conversation.user.userprofile.avatar.url }}" 
+                                         alt="Аватар {{ conversation.user.username }}" 
+                                         class="rounded-circle" 
+                                         style="width: 50px; height: 50px; object-fit: cover;">
+                                {% else %}
+                                    <div class="rounded-circle bg-secondary d-flex align-items-center justify-content-center" 
+                                         style="width: 50px; height: 50px;">
+                                        <i class="bi bi-person-fill text-white"></i>
+                                    </div>
+                                {% endif %}
+                            </div>
+                            <div class="flex-grow-1">
+                                <div class="d-flex justify-content-between align-items-start">
+                                    <div>
+                                        <h6 class="mb-1">
+                                            {{ conversation.user.get_full_name|default:conversation.user.username }}
+                                            {% if conversation.unread_count > 0 %}
+                                                <span class="badge bg-danger ms-2">{{ conversation.unread_count }}</span>
+                                            {% endif %}
+                                        </h6>
+                                        {% if conversation.last_message %}
+                                            <p class="text-muted mb-0 small">
+                                                {{ conversation.last_message.content|truncatewords:15 }}
+                                            </p>
+                                            <small class="text-muted">
+                                                <i class="bi bi-clock"></i> {{ conversation.last_message.created_at|date:"d.m.Y H:i" }}
+                                            </small>
+                                        {% else %}
+                                            <p class="text-muted mb-0 small">Нет сообщений</p>
+                                        {% endif %}
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    {% endfor %}
+                {% else %}
+                    <div class="text-center py-5">
+                        <i class="bi bi-envelope text-muted" style="font-size: 4rem;"></i>
+                        <h4 class="text-muted mt-3">У вас пока нет сообщений</h4>
+                        <p class="text-muted">Начните новую беседу с другим пользователем!</p>
+                        <a href="{% url 'send_message' %}" class="btn btn-primary">
+                            <i class="bi bi-plus-circle"></i> Отправить сообщение
+                        </a>
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+.hover-shadow:hover {
+    box-shadow: 0 4px 12px rgba(99, 102, 241, 0.2);
+    transition: all 0.3s ease;
+}
+</style>
+{% endblock %}
+

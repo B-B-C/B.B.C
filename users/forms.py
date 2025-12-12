@@ -2,6 +2,7 @@ from django import forms
 from django.contrib.auth.models import User
 from django.contrib.auth.forms import UserCreationForm
 from django.core.exceptions import ValidationError
+from .models import Message, Report
 import re
 
 class UserRegisterForm(UserCreationForm):
@@ -185,3 +186,114 @@ class PasswordChangeForm(forms.Form):
             raise ValidationError("New passwords don't match.")
         
         return cleaned_data
+
+
+class MessageForm(forms.ModelForm):
+    recipient_username = forms.CharField(
+        max_length=150,
+        widget=forms.TextInput(attrs={
+            'class': 'form-control',
+            'placeholder': 'Введите имя пользователя'
+        }),
+        label='Получатель'
+    )
+    content = forms.CharField(
+        widget=forms.Textarea(attrs={
+            'class': 'form-control',
+            'rows': 5,
+            'placeholder': 'Введите ваше сообщение...'
+        }),
+        label='Сообщение'
+    )
+    
+    class Meta:
+        model = Message
+        fields = ['content']
+    
+    def __init__(self, *args, **kwargs):
+        self.sender = kwargs.pop('sender', None)
+        super().__init__(*args, **kwargs)
+    
+    def clean_recipient_username(self):
+        username = self.cleaned_data.get('recipient_username')
+        if not username:
+            raise ValidationError("Введите имя пользователя.")
+        
+        try:
+            recipient = User.objects.get(username=username)
+        except User.DoesNotExist:
+            raise ValidationError("Пользователь с таким именем не найден.")
+        
+        if self.sender and recipient == self.sender:
+            raise ValidationError("Вы не можете отправить сообщение самому себе.")
+        
+        return recipient
+    
+    def save(self, commit=True):
+        message = super().save(commit=False)
+        message.sender = self.sender
+        message.recipient = self.cleaned_data['recipient_username']
+        if commit:
+            message.save()
+        return message
+
+
+class ReportForm(forms.ModelForm):
+    description = forms.CharField(
+        widget=forms.Textarea(attrs={
+            'class': 'form-control',
+            'rows': 5,
+            'placeholder': 'Опишите проблему подробно...'
+        }),
+        label='Описание проблемы',
+        required=True
+    )
+    reason = forms.ChoiceField(
+        choices=Report.REPORT_REASONS,
+        widget=forms.Select(attrs={
+            'class': 'form-control'
+        }),
+        label='Причина жалобы',
+        required=True
+    )
+    
+    class Meta:
+        model = Report
+        fields = ['reason', 'description']
+    
+    def __init__(self, *args, **kwargs):
+        self.reporter = kwargs.pop('reporter', None)
+        self.report_type = kwargs.pop('report_type', None)
+        self.reported_post = kwargs.pop('reported_post', None)
+        self.reported_comment = kwargs.pop('reported_comment', None)
+        self.reported_user = kwargs.pop('reported_user', None)
+        super().__init__(*args, **kwargs)
+    
+    def clean(self):
+        cleaned_data = super().clean()
+        
+        # Проверяем, что указан хотя бы один объект для жалобы
+        if not self.reported_post and not self.reported_comment and not self.reported_user:
+            raise ValidationError("Необходимо указать объект для жалобы.")
+        
+        # Проверяем, что пользователь не жалуется сам на себя
+        if self.reported_user and self.reporter and self.reported_user == self.reporter:
+            raise ValidationError("Вы не можете пожаловаться на самого себя.")
+        
+        return cleaned_data
+    
+    def save(self, commit=True):
+        report = super().save(commit=False)
+        report.reporter = self.reporter
+        report.report_type = self.report_type
+        
+        if self.reported_post:
+            report.reported_post = self.reported_post
+        elif self.reported_comment:
+            report.reported_comment = self.reported_comment
+        elif self.reported_user:
+            report.reported_user = self.reported_user
+        
+        if commit:
+            report.save()
+        return report

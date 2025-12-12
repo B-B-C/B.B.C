@@ -1,0 +1,194 @@
+{% extends 'forum/base.html' %}
+{% load static %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-lg-10">
+        <div class="card mb-3">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <div class="d-flex align-items-center">
+                    <a href="{% url 'messages_list' %}" class="btn btn-outline-secondary btn-sm me-3">
+                        <i class="bi bi-arrow-left"></i> Назад
+                    </a>
+                    <div class="d-flex align-items-center">
+                        {% if other_user.userprofile.avatar %}
+                            <img src="{{ other_user.userprofile.avatar.url }}" 
+                                 alt="Аватар {{ other_user.username }}" 
+                                 class="rounded-circle me-2" 
+                                 style="width: 40px; height: 40px; object-fit: cover;">
+                        {% else %}
+                            <div class="rounded-circle bg-secondary d-flex align-items-center justify-content-center me-2" 
+                                 style="width: 40px; height: 40px;">
+                                <i class="bi bi-person-fill text-white"></i>
+                            </div>
+                        {% endif %}
+                        <h5 class="mb-0">{{ other_user.get_full_name|default:other_user.username }}</h5>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Сообщения -->
+        <div class="card mb-3" style="max-height: 500px; overflow-y: auto;">
+            <div class="card-body">
+                {% if messages %}
+                    {% for message in messages %}
+                        <div class="d-flex mb-3 {% if message.sender == request.user %}justify-content-end{% else %}justify-content-start{% endif %}">
+                            <div class="message-bubble {% if message.sender == request.user %}message-sent{% else %}message-received{% endif %}" style="max-width: 70%;">
+                                <div class="d-flex align-items-start">
+                                    {% if message.sender != request.user %}
+                                        <div class="me-2">
+                                            {% if message.sender.userprofile.avatar %}
+                                                <img src="{{ message.sender.userprofile.avatar.url }}" 
+                                                     alt="Аватар" 
+                                                     class="rounded-circle" 
+                                                     style="width: 30px; height: 30px; object-fit: cover;">
+                                            {% else %}
+                                                <div class="rounded-circle bg-secondary d-flex align-items-center justify-content-center" 
+                                                     style="width: 30px; height: 30px;">
+                                                    <i class="bi bi-person-fill text-white" style="font-size: 0.7rem;"></i>
+                                                </div>
+                                            {% endif %}
+                                        </div>
+                                    {% endif %}
+                                    <div class="flex-grow-1">
+                                        {% if message.sender != request.user %}
+                                            <small class="text-muted d-block mb-1">
+                                                {{ message.sender.get_full_name|default:message.sender.username }}
+                                            </small>
+                                        {% endif %}
+                                        <div class="message-content">
+                                            {{ message.content|linebreaks }}
+                                        </div>
+                                        <small class="text-muted d-block mt-1">
+                                            <i class="bi bi-clock"></i> {{ message.created_at|date:"d.m.Y H:i" }}
+                                            {% if message.sender == request.user and message.is_read %}
+                                                <i class="bi bi-check2-all text-primary ms-1"></i>
+                                            {% elif message.sender == request.user %}
+                                                <i class="bi bi-check2 text-muted ms-1"></i>
+                                            {% endif %}
+                                        </small>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    {% endfor %}
+                {% else %}
+                    <div class="text-center py-4">
+                        <i class="bi bi-chat-dots text-muted" style="font-size: 3rem;"></i>
+                        <p class="text-muted mt-2">Начните беседу, отправив первое сообщение!</p>
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+
+        <!-- Форма отправки сообщения -->
+        <div class="card">
+            <div class="card-body">
+                <form method="post">
+                    {% csrf_token %}
+                    <div class="mb-3">
+                        <label for="{{ form.recipient_username.id_for_label }}" class="form-label">
+                            <i class="bi bi-person"></i> Получатель
+                        </label>
+                        {{ form.recipient_username }}
+                        {% if form.recipient_username.errors %}
+                            <div class="text-danger">
+                                {% for error in form.recipient_username.errors %}
+                                    <small>{{ error }}</small>
+                                {% endfor %}
+                            </div>
+                        {% endif %}
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="{{ form.content.id_for_label }}" class="form-label">
+                            <i class="bi bi-chat-text"></i> Сообщение
+                        </label>
+                        {{ form.content }}
+                        {% if form.content.errors %}
+                            <div class="text-danger">
+                                {% for error in form.content.errors %}
+                                    <small>{{ error }}</small>
+                                {% endfor %}
+                            </div>
+                        {% endif %}
+                    </div>
+                    
+                    <div class="d-flex justify-content-end">
+                        <button type="submit" class="btn btn-primary">
+                            <i class="bi bi-send"></i> Отправить
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        <!-- Пагинация -->
+        {% if messages.has_other_pages %}
+        <nav aria-label="Навигация по сообщениям" class="mt-3">
+            <ul class="pagination justify-content-center">
+                {% if messages.has_previous %}
+                    <li class="page-item">
+                        <a class="page-link" href="?page={{ messages.previous_page_number }}">Предыдущая</a>
+                    </li>
+                {% endif %}
+                
+                {% for num in messages.paginator.page_range %}
+                    {% if messages.number == num %}
+                        <li class="page-item active">
+                            <span class="page-link">{{ num }}</span>
+                        </li>
+                    {% elif num > messages.number|add:'-3' and num < messages.number|add:'3' %}
+                        <li class="page-item">
+                            <a class="page-link" href="?page={{ num }}">{{ num }}</a>
+                        </li>
+                    {% endif %}
+                {% endfor %}
+                
+                {% if messages.has_next %}
+                    <li class="page-item">
+                        <a class="page-link" href="?page={{ messages.next_page_number }}">Следующая</a>
+                    </li>
+                {% endif %}
+            </ul>
+        </nav>
+        {% endif %}
+    </div>
+</div>
+
+<style>
+.message-bubble {
+    padding: 10px 15px;
+    border-radius: 15px;
+    margin-bottom: 5px;
+}
+
+.message-sent {
+    background: linear-gradient(135deg, #6366f1, #8b5cf6);
+    color: white;
+    border-bottom-right-radius: 5px;
+}
+
+.message-received {
+    background: rgba(30, 41, 59, 0.8);
+    color: white;
+    border-bottom-left-radius: 5px;
+}
+
+.message-content {
+    word-wrap: break-word;
+}
+</style>
+
+<script>
+// Автоматическая прокрутка вниз при загрузке страницы
+window.addEventListener('load', function() {
+    const messagesContainer = document.querySelector('.card-body');
+    if (messagesContainer) {
+        messagesContainer.scrollTop = messagesContainer.scrollHeight;
+    }
+});
+</script>
+{% endblock %}
+

@@ -1,0 +1,171 @@
+{% extends 'forum/base.html' %}
+{% load static %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-lg-10">
+        <div class="card mb-3">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <h4 class="mb-0">
+                    <i class="bi bi-flag"></i> Жалоба #{{ report.id }}
+                </h4>
+                <a href="{% url 'admin_reports' %}" class="btn btn-outline-secondary btn-sm">
+                    <i class="bi bi-arrow-left"></i> Назад к списку
+                </a>
+            </div>
+        </div>
+        
+        <div class="row">
+            <div class="col-md-8">
+                <div class="card mb-3">
+                    <div class="card-header">
+                        <h5 class="mb-0">Информация о жалобе</h5>
+                    </div>
+                    <div class="card-body">
+                        <table class="table">
+                            <tr>
+                                <th width="200">Тип жалобы:</th>
+                                <td>
+                                    {% if report.reported_post %}
+                                        <span class="badge bg-primary">Пост</span>
+                                    {% elif report.reported_comment %}
+                                        <span class="badge bg-info">Комментарий</span>
+                                    {% elif report.reported_user %}
+                                        <span class="badge bg-warning">Пользователь</span>
+                                    {% endif %}
+                                </td>
+                            </tr>
+                            <tr>
+                                <th>Причина:</th>
+                                <td>{{ report.get_reason_display }}</td>
+                            </tr>
+                            <tr>
+                                <th>Статус:</th>
+                                <td>
+                                    {% if report.status == 'pending' %}
+                                        <span class="badge bg-warning">Ожидает рассмотрения</span>
+                                    {% elif report.status == 'reviewed' %}
+                                        <span class="badge bg-info">Рассмотрено</span>
+                                    {% elif report.status == 'resolved' %}
+                                        <span class="badge bg-success">Решено</span>
+                                    {% elif report.status == 'dismissed' %}
+                                        <span class="badge bg-secondary">Отклонено</span>
+                                    {% endif %}
+                                </td>
+                            </tr>
+                            <tr>
+                                <th>Жалобщик:</th>
+                                <td>{{ report.reporter.get_full_name|default:report.reporter.username }}</td>
+                            </tr>
+                            <tr>
+                                <th>Дата подачи:</th>
+                                <td>{{ report.created_at|date:"d.m.Y H:i" }}</td>
+                            </tr>
+                            {% if report.reviewed_by %}
+                            <tr>
+                                <th>Рассмотрено:</th>
+                                <td>
+                                    {{ report.reviewed_by.get_full_name|default:report.reviewed_by.username }}
+                                    {% if report.reviewed_at %}
+                                        ({{ report.reviewed_at|date:"d.m.Y H:i" }})
+                                    {% endif %}
+                                </td>
+                            </tr>
+                            {% endif %}
+                        </table>
+                        
+                        <div class="mt-3">
+                            <h6>Описание проблемы:</h6>
+                            <div class="alert alert-light">
+                                {{ report.description|linebreaks }}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Объект жалобы -->
+                <div class="card mb-3">
+                    <div class="card-header">
+                        <h5 class="mb-0">Объект жалобы</h5>
+                    </div>
+                    <div class="card-body">
+                        {% if report.reported_post %}
+                            <h6>Пост: "{{ report.reported_post.title }}"</h6>
+                            <p class="text-muted">Автор: {{ report.reported_post.author.get_full_name|default:report.reported_post.author.username }}</p>
+                            <p>{{ report.reported_post.body|truncatewords:50 }}</p>
+                            <a href="{% url 'thread-detail' report.reported_post.id %}" class="btn btn-sm btn-outline-primary" target="_blank">
+                                <i class="bi bi-box-arrow-up-right"></i> Открыть пост
+                            </a>
+                        {% elif report.reported_comment %}
+                            <h6>Комментарий</h6>
+                            <p class="text-muted">Автор: {{ report.reported_comment.author.get_full_name|default:report.reported_comment.author.username }}</p>
+                            <p>{{ report.reported_comment.content|truncatewords:50 }}</p>
+                            <a href="{% url 'thread-detail' report.reported_comment.post.id %}" class="btn btn-sm btn-outline-primary" target="_blank">
+                                <i class="bi bi-box-arrow-up-right"></i> Открыть комментарий
+                            </a>
+                        {% elif report.reported_user %}
+                            <h6>Пользователь: {{ report.reported_user.get_full_name|default:report.reported_user.username }}</h6>
+                            <p class="text-muted">Email: {{ report.reported_user.email }}</p>
+                            <a href="{% url 'admin_user_detail' report.reported_user.id %}" class="btn btn-sm btn-outline-primary" target="_blank">
+                                <i class="bi bi-box-arrow-up-right"></i> Открыть профиль
+                            </a>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+            
+            <div class="col-md-4">
+                <div class="card">
+                    <div class="card-header">
+                        <h5 class="mb-0">Действия</h5>
+                    </div>
+                    <div class="card-body">
+                        <form method="post">
+                            {% csrf_token %}
+                            
+                            <div class="mb-3">
+                                <label for="admin_notes" class="form-label">Заметки администратора</label>
+                                <textarea name="admin_notes" id="admin_notes" class="form-control" rows="5" placeholder="Добавьте заметки о рассмотрении жалобы...">{{ report.admin_notes }}</textarea>
+                            </div>
+                            
+                            <div class="d-grid gap-2">
+                                {% if report.status == 'pending' %}
+                                    <button type="submit" name="action" value="review" class="btn btn-info">
+                                        <i class="bi bi-check-circle"></i> Отметить как рассмотренное
+                                    </button>
+                                    <button type="submit" name="action" value="resolve" class="btn btn-success">
+                                        <i class="bi bi-check2-all"></i> Отметить как решённое
+                                    </button>
+                                    <button type="submit" name="action" value="dismiss" class="btn btn-secondary">
+                                        <i class="bi bi-x-circle"></i> Отклонить
+                                    </button>
+                                {% else %}
+                                    <button type="submit" name="action" value="review" class="btn btn-info">
+                                        <i class="bi bi-check-circle"></i> Рассмотрено
+                                    </button>
+                                    <button type="submit" name="action" value="resolve" class="btn btn-success">
+                                        <i class="bi bi-check2-all"></i> Решено
+                                    </button>
+                                    <button type="submit" name="action" value="dismiss" class="btn btn-secondary">
+                                        <i class="bi bi-x-circle"></i> Отклонено
+                                    </button>
+                                {% endif %}
+                            </div>
+                        </form>
+                        
+                        {% if report.admin_notes %}
+                        <div class="mt-3">
+                            <h6>Текущие заметки:</h6>
+                            <div class="alert alert-light">
+                                {{ report.admin_notes|linebreaks }}
+                            </div>
+                        </div>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+

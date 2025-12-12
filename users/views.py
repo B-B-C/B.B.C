@@ -1,12 +1,15 @@
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib import messages
 from django.contrib.auth import login, authenticate, logout, update_session_auth_hash
-from .forms import UserRegisterForm, UserProfileForm, PasswordChangeForm
+from .forms import UserRegisterForm, UserProfileForm, PasswordChangeForm, MessageForm, ReportForm
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth.models import User
 from forum.models import Post, Comment
-from .models import UserProfile
+from .models import UserProfile, Message, Report
 from django.core.paginator import Paginator
+from django.db.models import Q
+from django.utils import timezone
+from django.urls import reverse
 
 def register(request):
     if request.method == 'POST':
@@ -129,4 +132,250 @@ def dashboard(request):
         'user_comments': user_comments,
         'liked_posts': liked_posts,
         'stats': stats,
+    })
+
+
+@login_required
+def messages_list(request):
+    """Список всех диалогов пользователя"""
+    user = request.user
+    
+    # Получаем всех пользователей, с которыми есть переписка
+    sent_messages = Message.objects.filter(sender=user).values_list('recipient', flat=True).distinct()
+    received_messages = Message.objects.filter(recipient=user).values_list('sender', flat=True).distinct()
+    
+    # Объединяем всех собеседников
+    all_conversations = set(list(sent_messages) + list(received_messages))
+    
+    # Получаем последнее сообщение для каждого диалога
+    conversations = []
+    for user_id in all_conversations:
+        try:
+            other_user = User.objects.get(id=user_id)
+        except User.DoesNotExist:
+            continue  # Пропускаем удалённых пользователей
+        
+        last_message = Message.objects.filter(
+            Q(sender=user, recipient=other_user) | Q(sender=other_user, recipient=user)
+        ).order_by('-created_at').first()
+        
+        unread_count = Message.objects.filter(
+            sender=other_user, 
+            recipient=user, 
+            is_read=False
+        ).count()
+        
+        conversations.append({
+            'user': other_user,
+            'last_message': last_message,
+            'unread_count': unread_count,
+        })
+    
+    # Сортируем по времени последнего сообщения
+    conversations.sort(key=lambda x: x['last_message'].created_at if x['last_message'] else timezone.now(), reverse=True)
+    
+    return render(request, 'users/messages_list.html', {
+        'conversations': conversations,
+    })
+
+
+@login_required
+def conversation(request, user_id):
+    """Просмотр диалога с конкретным пользователем"""
+    other_user = get_object_or_404(User, id=user_id)
+    current_user = request.user
+    
+    # Проверяем, не забанен ли пользователь
+    try:
+        profile = current_user.userprofile
+        if profile.is_banned:
+            if profile.banned_until and profile.banned_until > timezone.now():
+                messages.error(request, f'Вы забанены до {profile.banned_until.strftime("%d.%m.%Y %H:%M")}. Причина: {profile.ban_reason or "Не указана"}')
+                return redirect('messages_list')
+            elif not profile.banned_until:
+                messages.error(request, f'Вы забанены навсегда. Причина: {profile.ban_reason or "Не указана"}')
+                return redirect('messages_list')
+    except UserProfile.DoesNotExist:
+        pass
+    
+    # Получаем все сообщения между пользователями
+    message_list = Message.objects.filter(
+        Q(sender=current_user, recipient=other_user) | Q(sender=other_user, recipient=current_user)
+    ).order_by('created_at')
+    
+    # Помечаем входящие сообщения как прочитанные
+    Message.objects.filter(sender=other_user, recipient=current_user, is_read=False).update(is_read=True)
+    
+    # Пагинация
+    paginator = Paginator(message_list, 20)
+    page_number = request.GET.get('page', 1)
+    messages_page = paginator.get_page(page_number)
+    
+    # Форма для отправки сообщения
+    if request.method == 'POST':
+        form = MessageForm(request.POST, sender=current_user)
+        if form.is_valid():
+            message = form.save(commit=False)
+            message.sender = current_user
+            message.recipient = other_user
+            message.save()
+            messages.success(request, 'Сообщение отправлено!')
+            return redirect('conversation', user_id=user_id)
+    else:
+        form = MessageForm(sender=current_user)
+        form.fields['recipient_username'].initial = other_user.username
+        form.fields['recipient_username'].widget.attrs['readonly'] = True
+    
+    return render(request, 'users/conversation.html', {
+        'other_user': other_user,
+        'messages': messages_page,
+        'form': form,
+    })
+
+
+@login_required
+def send_message(request, user_id=None):
+    """Отправка нового сообщения"""
+    current_user = request.user
+    
+    # Проверяем, не забанен ли пользователь
+    try:
+        profile = current_user.userprofile
+        if profile.is_banned:
+            if profile.banned_until and profile.banned_until > timezone.now():
+                messages.error(request, f'Вы забанены до {profile.banned_until.strftime("%d.%m.%Y %H:%M")}. Причина: {profile.ban_reason or "Не указана"}')
+                return redirect('messages_list')
+            elif not profile.banned_until:
+                messages.error(request, f'Вы забанены навсегда. Причина: {profile.ban_reason or "Не указана"}')
+                return redirect('messages_list')
+    except UserProfile.DoesNotExist:
+        pass
+    
+    recipient = None
+    if user_id:
+        recipient = get_object_or_404(User, id=user_id)
+    
+    if request.method == 'POST':
+        form = MessageForm(request.POST, sender=current_user)
+        if form.is_valid():
+            message = form.save(commit=False)
+            message.sender = current_user
+            message.recipient = form.cleaned_data['recipient_username']
+            message.save()
+            messages.success(request, 'Сообщение отправлено!')
+            return redirect('conversation', user_id=message.recipient.id)
+    else:
+        form = MessageForm(sender=current_user)
+        if recipient:
+            form.fields['recipient_username'].initial = recipient.username
+    
+    return render(request, 'users/send_message.html', {
+        'form': form,
+        'recipient': recipient,
+    })
+
+
+@login_required
+def report_post(request, post_id):
+    """Подача жалобы на пост"""
+    post = get_object_or_404(Post, id=post_id)
+    
+    # Проверяем, не забанен ли пользователь
+    try:
+        profile = request.user.userprofile
+        if profile.is_banned:
+            if profile.banned_until and profile.banned_until > timezone.now():
+                messages.error(request, f'Вы забанены до {profile.banned_until.strftime("%d.%m.%Y %H:%M")}. Причина: {profile.ban_reason or "Не указана"}')
+                return redirect('thread-detail', post_id=post_id)
+            elif not profile.banned_until:
+                messages.error(request, f'Вы забанены навсегда. Причина: {profile.ban_reason or "Не указана"}')
+                return redirect('thread-detail', post_id=post_id)
+    except UserProfile.DoesNotExist:
+        pass
+    
+    if request.method == 'POST':
+        form = ReportForm(request.POST, reporter=request.user, report_type='post', reported_post=post)
+        if form.is_valid():
+            form.save()
+            messages.success(request, 'Жалоба отправлена администратору. Спасибо за обращение!')
+            return redirect('thread-detail', post_id=post_id)
+    else:
+        form = ReportForm(reporter=request.user, report_type='post', reported_post=post)
+    
+    return render(request, 'users/report.html', {
+        'form': form,
+        'report_type': 'пост',
+        'object': post,
+        'back_url': reverse('thread-detail', args=[post_id]),
+    })
+
+
+@login_required
+def report_comment(request, comment_id):
+    """Подача жалобы на комментарий"""
+    comment = get_object_or_404(Comment, id=comment_id)
+    
+    # Проверяем, не забанен ли пользователь
+    try:
+        profile = request.user.userprofile
+        if profile.is_banned:
+            if profile.banned_until and profile.banned_until > timezone.now():
+                messages.error(request, f'Вы забанены до {profile.banned_until.strftime("%d.%m.%Y %H:%M")}. Причина: {profile.ban_reason or "Не указана"}')
+                return redirect('thread-detail', post_id=comment.post.id)
+            elif not profile.banned_until:
+                messages.error(request, f'Вы забанены навсегда. Причина: {profile.ban_reason or "Не указана"}')
+                return redirect('thread-detail', post_id=comment.post.id)
+    except UserProfile.DoesNotExist:
+        pass
+    
+    if request.method == 'POST':
+        form = ReportForm(request.POST, reporter=request.user, report_type='comment', reported_comment=comment)
+        if form.is_valid():
+            form.save()
+            messages.success(request, 'Жалоба отправлена администратору. Спасибо за обращение!')
+            return redirect('thread-detail', post_id=comment.post.id)
+    else:
+        form = ReportForm(reporter=request.user, report_type='comment', reported_comment=comment)
+    
+    return render(request, 'users/report.html', {
+        'form': form,
+        'report_type': 'комментарий',
+        'object': comment,
+        'back_url': reverse('thread-detail', args=[comment.post.id]),
+    })
+
+
+@login_required
+def report_user(request, user_id):
+    """Подача жалобы на пользователя"""
+    reported_user = get_object_or_404(User, id=user_id)
+    
+    # Проверяем, не забанен ли пользователь
+    try:
+        profile = request.user.userprofile
+        if profile.is_banned:
+            messages.error(request, f'Вы забанены. Причина: {profile.ban_reason or "Не указана"}')
+            return redirect('forum-index')
+    except UserProfile.DoesNotExist:
+        pass
+    
+    # Нельзя жаловаться на самого себя
+    if reported_user == request.user:
+        messages.error(request, 'Вы не можете пожаловаться на самого себя.')
+        return redirect('forum-index')
+    
+    if request.method == 'POST':
+        form = ReportForm(request.POST, reporter=request.user, report_type='user', reported_user=reported_user)
+        if form.is_valid():
+            form.save()
+            messages.success(request, 'Жалоба отправлена администратору. Спасибо за обращение!')
+            return redirect('forum-index')
+    else:
+        form = ReportForm(reporter=request.user, report_type='user', reported_user=reported_user)
+    
+    return render(request, 'users/report.html', {
+        'form': form,
+        'report_type': 'пользователя',
+        'object': reported_user,
+        'back_url': reverse('forum-index'),
     })

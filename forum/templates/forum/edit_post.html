@@ -72,6 +72,36 @@
                     </div>
                     {% endif %}
                     
+                    <div class="mb-3">
+                        <label for="{{ form.video.id_for_label }}" class="form-label">
+                            <i class="bi bi-camera-video"></i> Видео
+                        </label>
+                        {{ form.video }}
+                        {% if form.video.errors %}
+                            <div class="text-danger">
+                                {% for error in form.video.errors %}
+                                    <small>{{ error }}</small>
+                                {% endfor %}
+                            </div>
+                        {% endif %}
+                        <div class="form-text">Выберите новое видео для замены текущего</div>
+                    </div>
+                    
+                    {% if post.video %}
+                    <div class="mb-3">
+                        <label class="form-label">Текущее видео:</label>
+                        <div class="d-flex align-items-center">
+                            <video controls class="rounded me-3" style="max-width: 300px; max-height: 200px;">
+                                <source src="{{ post.video.url }}" type="video/mp4">
+                                Ваш браузер не поддерживает видео.
+                            </video>
+                            <div>
+                                <small class="text-muted">Выберите новое видео выше, чтобы заменить текущее</small>
+                            </div>
+                        </div>
+                    </div>
+                    {% endif %}
+                    
                     <div class="d-flex justify-content-between">
                         <a href="{% url 'thread-detail' post.id %}" class="btn btn-secondary">
                             <i class="bi bi-arrow-left"></i> Отмена

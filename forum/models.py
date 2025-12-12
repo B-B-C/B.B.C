@@ -8,6 +8,7 @@ class Post(models.Model):
     created_at = models.DateTimeField(auto_now_add=True)
     likes = models.ManyToManyField(User, related_name='liked_posts', blank=True)
     image = models.ImageField(upload_to='posts/', blank=True, null=True)
+    video = models.FileField(upload_to='posts/videos/', blank=True, null=True)
 
     def __str__(self):
         return self.title
@@ -18,6 +19,7 @@ class Comment(models.Model):
     content = models.TextField()
     created_at = models.DateTimeField(auto_now_add=True)
     image = models.ImageField(upload_to='comments/', blank=True, null=True)
+    sticker = models.CharField(max_length=100, blank=True, null=True, help_text="Эмодзи или стикер для комментария")
 
     def __str__(self):
         return f'Комментарий от {self.author} к "{self.post}"'

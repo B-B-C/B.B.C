@@ -17,6 +17,9 @@
                 <a href="{% url 'admin_posts' %}" class="btn btn-outline-primary">
                     <i class="bi bi-file-text"></i> Управление темами
                 </a>
+                <a href="{% url 'admin_reports' %}" class="btn btn-outline-danger">
+                    <i class="bi bi-flag"></i> Жалобы
+                </a>
             </div>
         </div>
     </div>
@@ -61,6 +64,23 @@
         </div>
     </div>
 </div>
+
+<!-- Reports Alert -->
+{% if stats.pending_reports > 0 %}
+<div class="row mb-4">
+    <div class="col-12">
+        <div class="alert alert-warning d-flex justify-content-between align-items-center">
+            <div>
+                <i class="bi bi-exclamation-triangle"></i>
+                <strong>У вас {{ stats.pending_reports }} нерассмотренных жалоб</strong>
+            </div>
+            <a href="{% url 'admin_reports' %}" class="btn btn-warning">
+                <i class="bi bi-flag"></i> Перейти к жалобам
+            </a>
+        </div>
+    </div>
+</div>
+{% endif %}
 
 <div class="row">
     <!-- Recent Posts -->
@@ -178,6 +198,11 @@
                     <div class="col-md-3">
                         <a href="{% url 'admin_posts' %}" class="btn btn-outline-success w-100 mb-2">
                             <i class="bi bi-file-text"></i> Темы
+                        </a>
+                    </div>
+                    <div class="col-md-3">
+                        <a href="{% url 'admin_reports' %}" class="btn btn-outline-danger w-100 mb-2">
+                            <i class="bi bi-flag"></i> Жалобы
                         </a>
                     </div>
                     <div class="col-md-3">

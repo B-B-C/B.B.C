@@ -1,164 +1,176 @@
 from rest_framework import status
 from rest_framework.decorators import api_view, permission_classes
-from rest_framework.permissions import AllowAny, IsAuthenticated
+from rest_framework.permissions import IsAuthenticated, IsAdminUser, AllowAny
 from rest_framework.response import Response
 from rest_framework_simplejwt.tokens import RefreshToken
-from rest_framework_simplejwt.views import TokenObtainPairView, TokenRefreshView
-from django.contrib.auth import authenticate
 from django.contrib.auth.models import User
-from .serializers import UserSerializer, UserProfileSerializer
+from django.contrib.auth import authenticate
 from .models import UserProfile
-from django.shortcuts import get_object_or_404
-from django.contrib.auth.decorators import login_required
-from django.utils.decorators import method_decorator
-from rest_framework.views import APIView
-from rest_framework.generics import RetrieveUpdateAPIView
-from django.http import JsonResponse
-import json
+from .serializers import UserSerializer, UserProfileSerializer
 
-class CustomTokenObtainPairView(TokenObtainPairView):
-    def post(self, request, *args, **kwargs):
-        response = super().post(request, *args, **kwargs)
-        if response.status_code == 200:
-            # Get user data
-            username = request.data.get('username')
-            user = User.objects.get(username=username)
-            user_data = UserSerializer(user).data
-            
-            # Add user data to response
-            response.data['user'] = user_data
-        return response
-
-class CustomTokenRefreshView(TokenRefreshView):
-    pass
 
 @api_view(['POST'])
 @permission_classes([AllowAny])
 def register_api(request):
-    """Register a new user via API"""
-    try:
-        data = json.loads(request.body)
-        username = data.get('username')
-        email = data.get('email')
-        password = data.get('password')
-        password_confirm = data.get('password_confirm')
+    """API для регистрации пользователя с JWT токенами"""
+    username = request.data.get('username')
+    email = request.data.get('email')
+    password = request.data.get('password')
+    
+    if not all([username, email, password]):
+        return Response({
+            'error': 'All fields are required',
+            'detail': 'Username, email and password are required'
+        }, status=status.HTTP_400_BAD_REQUEST)
+    
+    if User.objects.filter(username=username).exists():
+        return Response({
+            'error': 'Username already exists',
+            'detail': 'A user with this username already exists'
+        }, status=status.HTTP_400_BAD_REQUEST)
+    
+    if User.objects.filter(email=email).exists():
+        return Response({
+            'error': 'Email already exists',
+            'detail': 'A user with this email already exists'
+        }, status=status.HTTP_400_BAD_REQUEST)
+    
+    user = User.objects.create_user(username=username, email=email, password=password)
+    UserProfile.objects.create(user=user)
+    
+    # Generate JWT tokens
+    refresh = RefreshToken.for_user(user)
+    
+    return Response({
+        'refresh': str(refresh),
+        'access': str(refresh.access_token),
+        'user': UserSerializer(user).data
+    }, status=status.HTTP_201_CREATED)
+
+
+@api_view(['POST'])
+@permission_classes([AllowAny])
+def login_api(request):
+    """API для входа пользователя с JWT токенами"""
+    username = request.data.get('username')
+    password = request.data.get('password')
+    
+    if not all([username, password]):
+        return Response({
+            'error': 'Username and password are required',
+            'detail': 'Both username and password fields are required'
+        }, status=status.HTTP_400_BAD_REQUEST)
+    
+    user = authenticate(username=username, password=password)
+    if user:
+        # Check if user is banned
+        try:
+            profile = user.userprofile
+            if profile.is_banned:
+                from django.utils import timezone
+                if profile.banned_until and profile.banned_until > timezone.now():
+                    return Response({
+                        'error': 'Account banned',
+                        'detail': f'Account is banned until {profile.banned_until}. Reason: {profile.ban_reason or "Not specified"}'
+                    }, status=status.HTTP_403_FORBIDDEN)
+                elif not profile.banned_until:
+                    return Response({
+                        'error': 'Account permanently banned',
+                        'detail': f'Account is permanently banned. Reason: {profile.ban_reason or "Not specified"}'
+                    }, status=status.HTTP_403_FORBIDDEN)
+        except UserProfile.DoesNotExist:
+            pass
         
-        # Validation
-        if not all([username, email, password, password_confirm]):
+        if not user.is_active:
             return Response({
-                'error': 'All fields are required'
-            }, status=status.HTTP_400_BAD_REQUEST)
+                'error': 'Account inactive',
+                'detail': 'This account has been deactivated'
+            }, status=status.HTTP_403_FORBIDDEN)
         
-        if password != password_confirm:
-            return Response({
-                'error': 'Passwords do not match'
-            }, status=status.HTTP_400_BAD_REQUEST)
-        
-        if User.objects.filter(username=username).exists():
-            return Response({
-                'error': 'Username already exists'
-            }, status=status.HTTP_400_BAD_REQUEST)
-        
-        if User.objects.filter(email=email).exists():
-            return Response({
-                'error': 'Email already exists'
-            }, status=status.HTTP_400_BAD_REQUEST)
-        
-        # Create user
-        user = User.objects.create_user(
-            username=username,
-            email=email,
-            password=password
-        )
-        
-        # Create user profile
-        UserProfile.objects.create(user=user)
-        
-        # Generate tokens
+        # Generate JWT tokens
         refresh = RefreshToken.for_user(user)
-        
         return Response({
-            'message': 'User created successfully',
-            'user': UserSerializer(user).data,
-            'tokens': {
-                'access': str(refresh.access_token),
-                'refresh': str(refresh)
-            }
-        }, status=status.HTTP_201_CREATED)
-        
-    except Exception as e:
-        return Response({
-            'error': str(e)
-        }, status=status.HTTP_400_BAD_REQUEST)
-
-@api_view(['GET'])
-@permission_classes([IsAuthenticated])
-def user_profile_api(request):
-    """Get current user profile"""
-    try:
-        user = request.user
-        profile, created = UserProfile.objects.get_or_create(user=user)
-        
-        return Response({
-            'user': UserSerializer(user).data,
-            'profile': UserProfileSerializer(profile).data
+            'refresh': str(refresh),
+            'access': str(refresh.access_token),
+            'user': UserSerializer(user).data
         })
-    except Exception as e:
+    else:
         return Response({
-            'error': str(e)
-        }, status=status.HTTP_400_BAD_REQUEST)
+            'error': 'Invalid credentials',
+            'detail': 'Unable to log in with provided credentials'
+        }, status=status.HTTP_401_UNAUTHORIZED)
 
-@api_view(['PUT'])
-@permission_classes([IsAuthenticated])
-def update_profile_api(request):
-    """Update user profile"""
-    try:
-        user = request.user
-        profile, created = UserProfile.objects.get_or_create(user=user)
-        
-        data = json.loads(request.body)
-        
-        # Update user fields
-        if 'first_name' in data:
-            user.first_name = data['first_name']
-        if 'last_name' in data:
-            user.last_name = data['last_name']
-        if 'email' in data:
-            user.email = data['email']
-        
-        # Update profile fields
-        if 'bio' in data:
-            profile.bio = data['bio']
-        
-        user.save()
-        profile.save()
-        
-        return Response({
-            'message': 'Profile updated successfully',
-            'user': UserSerializer(user).data,
-            'profile': UserProfileSerializer(profile).data
-        })
-        
-    except Exception as e:
-        return Response({
-            'error': str(e)
-        }, status=status.HTTP_400_BAD_REQUEST)
 
 @api_view(['POST'])
 @permission_classes([IsAuthenticated])
 def logout_api(request):
-    """Logout user and blacklist token"""
+    """API для выхода пользователя (blacklist refresh token)"""
     try:
-        refresh_token = request.data.get('refresh_token')
+        refresh_token = request.data.get('refresh')
         if refresh_token:
             token = RefreshToken(refresh_token)
             token.blacklist()
-        
+            return Response({'message': 'Successfully logged out'})
+        else:
+            return Response({
+                'error': 'Refresh token required',
+                'detail': 'Refresh token is required in request body'
+            }, status=status.HTTP_400_BAD_REQUEST)
+    except Exception as e:
         return Response({
-            'message': 'Successfully logged out'
+            'error': 'Invalid token',
+            'detail': str(e)
+        }, status=status.HTTP_400_BAD_REQUEST)
+
+
+@api_view(['POST'])
+@permission_classes([AllowAny])
+def token_refresh_api(request):
+    """API для обновления access token"""
+    refresh_token = request.data.get('refresh')
+    if not refresh_token:
+        return Response({
+            'error': 'Refresh token required',
+            'detail': 'Refresh token is required'
+        }, status=status.HTTP_400_BAD_REQUEST)
+    
+    try:
+        refresh = RefreshToken(refresh_token)
+        return Response({
+            'access': str(refresh.access_token)
         })
     except Exception as e:
         return Response({
-            'error': str(e)
-        }, status=status.HTTP_400_BAD_REQUEST)
+            'error': 'Invalid refresh token',
+            'detail': str(e)
+        }, status=status.HTTP_401_UNAUTHORIZED)
 
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def profile_api(request):
+    """API для получения профиля пользователя"""
+    serializer = UserSerializer(request.user)
+    return Response(serializer.data)
+
+
+@api_view(['PUT'])
+@permission_classes([IsAuthenticated])
+def update_profile_api(request):
+    """API для обновления профиля пользователя"""
+    user = request.user
+    user.first_name = request.data.get('first_name', user.first_name)
+    user.last_name = request.data.get('last_name', user.last_name)
+    user.email = request.data.get('email', user.email)
+    user.save()
+    
+    return Response(UserSerializer(user).data)
+
+
+@api_view(['GET'])
+@permission_classes([IsAdminUser])
+def admin_users_api(request):
+    """API для получения списка пользователей (только для админов)"""
+    users = User.objects.all()
+    serializer = UserSerializer(users, many=True)
+    return Response(serializer.data)

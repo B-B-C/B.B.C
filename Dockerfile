@@ -1,36 +1,45 @@
-FROM python:3.11-slim
+# Используем официальный Python образ
+FROM python:3.12-slim
 
-# Set environment variables
-ENV PYTHONDONTWRITEBYTECODE=1
-ENV PYTHONUNBUFFERED=1
-
-# Set work directory
-WORKDIR /app
-
-# Install system dependencies
-RUN apt-get update \
-    && apt-get install -y --no-install-recommends \
-        postgresql-client \
-        build-essential \
-        libpq-dev \
+# Устанавливаем системные зависимости
+RUN apt-get update && apt-get install -y \
+    gcc \
+    libpq-dev \
+    netcat-openbsd \
     && rm -rf /var/lib/apt/lists/*
 
-# Install Python dependencies
-COPY requirements.txt /app/
+# Устанавливаем рабочую директорию
+WORKDIR /app
+
+# Копируем requirements.txt
+COPY requirements.txt .
+
+# Устанавливаем Python зависимости
 RUN pip install --no-cache-dir -r requirements.txt
 
-# Copy project
-COPY . /app/
+# Копируем код приложения
+COPY . .
 
-# Create logs directory
-RUN mkdir -p /app/logs
+# Скрипт для запуска приложения (до переключения пользователя для прав)
+COPY docker-entrypoint.sh /app/
+RUN chmod +x /app/docker-entrypoint.sh
 
-# Collect static files
-RUN python manage.py collectstatic --noinput
+# Создаем пользователя для безопасности
+RUN adduser --disabled-password --gecos '' appuser && \
+    chown -R appuser:appuser /app
 
-# Expose port
+USER appuser
+
+# Создаем директории для статических файлов и медиа
+RUN mkdir -p /app/staticfiles /app/media /app/logs
+
+# Открываем порт
 EXPOSE 8000
 
-# Run the application
-CMD ["gunicorn", "--bind", "0.0.0.0:8000", "forum_project.wsgi:application"]
+# Скрипт для запуска приложения
+COPY docker-entrypoint.sh /app/
+RUN chmod +x /app/docker-entrypoint.sh
 
+# Команда запуска
+ENTRYPOINT ["/app/docker-entrypoint.sh"]
+CMD ["gunicorn", "--bind", "0.0.0.0:8000", "--workers", "4", "--threads", "2", "--timeout", "120", "--access-logfile", "-", "--error-logfile", "-", "forum_project.wsgi:application"]

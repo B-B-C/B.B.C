@@ -5,7 +5,7 @@ from django.contrib import messages
 from django.core.paginator import Paginator
 from django.db.models import Q
 from forum.models import Post, Comment
-from .models import UserProfile
+from .models import UserProfile, Report
 from django.http import JsonResponse
 from django.views.decorators.http import require_POST
 from django.utils import timezone
@@ -25,6 +25,7 @@ def admin_dashboard(request):
     total_posts = Post.objects.count()
     total_comments = Comment.objects.count()
     admin_users = UserProfile.objects.filter(is_admin=True).count()
+    pending_reports = Report.objects.filter(status='pending').count()
     
     # Get recent activity
     recent_posts = Post.objects.order_by('-created_at')[:10]
@@ -35,6 +36,7 @@ def admin_dashboard(request):
         'total_posts': total_posts,
         'total_comments': total_comments,
         'admin_users': admin_users,
+        'pending_reports': pending_reports,
     }
     
     return render(request, 'users/admin_dashboard.html', {
@@ -264,5 +266,82 @@ def admin_delete_comment(request, comment_id):
     return JsonResponse({
         'success': True,
         'message': f'Comment "{content}" deleted successfully'
+    })
+
+
+@login_required
+def admin_reports(request):
+    """Просмотр жалоб администратором"""
+    if not hasattr(request.user, 'userprofile') or not request.user.userprofile.is_admin:
+        messages.error(request, 'You do not have permission to access this page.')
+        return redirect('forum-index')
+    
+    status_filter = request.GET.get('status', 'pending')
+    reports = Report.objects.all()
+    
+    if status_filter and status_filter != 'all':
+        reports = reports.filter(status=status_filter)
+    
+    reports = reports.order_by('-created_at')
+    
+    paginator = Paginator(reports, 20)
+    page_number = request.GET.get('page')
+    reports_page = paginator.get_page(page_number)
+    
+    # Статистика
+    stats = {
+        'pending': Report.objects.filter(status='pending').count(),
+        'reviewed': Report.objects.filter(status='reviewed').count(),
+        'resolved': Report.objects.filter(status='resolved').count(),
+        'dismissed': Report.objects.filter(status='dismissed').count(),
+        'total': Report.objects.count(),
+    }
+    
+    return render(request, 'users/admin_reports.html', {
+        'reports': reports_page,
+        'status_filter': status_filter,
+        'stats': stats,
+    })
+
+
+@login_required
+def admin_report_detail(request, report_id):
+    """Детали жалобы для администратора"""
+    if not hasattr(request.user, 'userprofile') or not request.user.userprofile.is_admin:
+        messages.error(request, 'You do not have permission to access this page.')
+        return redirect('forum-index')
+    
+    report = get_object_or_404(Report, id=report_id)
+    
+    if request.method == 'POST':
+        action = request.POST.get('action')
+        admin_notes = request.POST.get('admin_notes', '')
+        
+        if action == 'review':
+            report.status = 'reviewed'
+            report.reviewed_at = timezone.now()
+            report.reviewed_by = request.user
+            report.admin_notes = admin_notes
+            report.save()
+            messages.success(request, 'Жалоба отмечена как рассмотренная.')
+        elif action == 'resolve':
+            report.status = 'resolved'
+            report.reviewed_at = timezone.now()
+            report.reviewed_by = request.user
+            report.admin_notes = admin_notes
+            report.save()
+            messages.success(request, 'Жалоба отмечена как решённая.')
+        elif action == 'dismiss':
+            report.status = 'dismissed'
+            report.reviewed_at = timezone.now()
+            report.reviewed_by = request.user
+            report.admin_notes = admin_notes
+            report.save()
+            messages.success(request, 'Жалоба отклонена.')
+        
+        return redirect('admin_reports')
+    
+    return render(request, 'users/admin_report_detail.html', {
+        'report': report,
     })
 

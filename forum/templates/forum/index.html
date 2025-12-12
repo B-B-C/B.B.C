@@ -11,6 +11,73 @@
     {% endif %}
 </div>
 
+<!-- Поиск и фильтры -->
+<div class="card shadow-sm mb-4">
+    <div class="card-body">
+        <form method="get" id="filterForm" action="{% url 'forum-index' %}">
+            <div class="row g-3">
+                <!-- Поиск -->
+                <div class="col-md-4">
+                    <label class="form-label small text-muted">Поиск</label>
+                    <div class="input-group">
+                        <input type="text" name="q" id="searchInput" class="form-control" 
+                               placeholder="Поиск по темам..." value="{{ search_query|default:'' }}">
+                        <button type="submit" class="btn btn-outline-primary">
+                            <i class="bi bi-search"></i>
+                        </button>
+                    </div>
+                </div>
+                
+                <!-- Фильтр по времени -->
+                <div class="col-md-2">
+                    <label class="form-label small text-muted">Время</label>
+                    <select name="time" id="timeSelect" class="form-select" onchange="submitFilterForm()">
+                        {% for value, label in time_options %}
+                            <option value="{{ value }}" {% if time_filter == value %}selected{% endif %}>
+                                {{ label }}
+                            </option>
+                        {% endfor %}
+                    </select>
+                </div>
+                
+                <!-- Фильтр по лайкам -->
+                <div class="col-md-2">
+                    <label class="form-label small text-muted">Мин. лайков</label>
+                    <input type="number" name="min_likes" id="minLikesInput" class="form-control" 
+                           placeholder="0" value="{{ min_likes|default:'' }}" min="0"
+                           onchange="submitFilterForm()">
+                </div>
+                
+                <!-- Сортировка -->
+                <div class="col-md-2">
+                    <label class="form-label small text-muted">Сортировка</label>
+                    <select name="sort" id="sortSelect" class="form-select" onchange="submitFilterForm()">
+                        {% for value, label in sort_options %}
+                            <option value="{{ value }}" {% if sort_by == value %}selected{% endif %}>
+                                {{ label }}
+                            </option>
+                        {% endfor %}
+                    </select>
+                </div>
+                
+                <!-- Сброс фильтров -->
+                <div class="col-md-2 d-flex align-items-end">
+                    <a href="{% url 'forum-index' %}" class="btn btn-outline-secondary w-100">
+                        <i class="bi bi-x-circle"></i> Сбросить
+                    </a>
+                </div>
+            </div>
+        </form>
+    </div>
+</div>
+
+<script>
+function submitFilterForm() {
+    // Убеждаемся, что форма отправляется с текущими значениями
+    document.getElementById('filterForm').submit();
+}
+</script>
+
 {% if posts %}
     {% for post in posts %}
         <div class="card mb-3">
@@ -44,9 +111,22 @@
                                  style="max-width: 200px; max-height: 150px; object-fit: cover;">
                         </div>
                         {% endif %}
+                        {% if post.video %}
+                        <div class="mb-2">
+                            <video controls class="img-fluid rounded" style="max-width: 200px; max-height: 150px; object-fit: cover;">
+                                <source src="{{ post.video.url }}" type="video/mp4">
+                                Ваш браузер не поддерживает видео.
+                            </video>
+                        </div>
+                        {% endif %}
                         <div class="d-flex justify-content-between align-items-center">
                             <small class="text-muted">
                                 <i class="bi bi-person"></i> {{ post.author.get_full_name|default:post.author.username }}
+                                {% if user.is_authenticated and user != post.author %}
+                                    <a href="{% url 'send_message_to_user' post.author.id %}" class="btn btn-sm btn-outline-primary ms-2">
+                                        <i class="bi bi-envelope"></i> Написать
+                                    </a>
+                                {% endif %}
                                 <i class="bi bi-calendar ms-3"></i> {{ post.created_at|date:"d.m.Y H:i" }}
                             </small>
                             <div class="d-flex align-items-center">
@@ -90,6 +170,57 @@
             </a>
         {% endif %}
     </div>
+{% endif %}
+
+<!-- Пагинация -->
+{% if posts.has_other_pages %}
+<nav aria-label="Page navigation" class="mt-4">
+    <ul class="pagination justify-content-center">
+        {% if posts.has_previous %}
+            <li class="page-item">
+                <a class="page-link" href="?page=1{% if search_query %}&q={{ search_query }}{% endif %}{% if sort_by %}&sort={{ sort_by }}{% endif %}{% if time_filter %}&time={{ time_filter }}{% endif %}{% if min_likes %}&min_likes={{ min_likes }}{% endif %}">
+                    <i class="bi bi-chevron-double-left"></i>
+                </a>
+            </li>
+            <li class="page-item">
+                <a class="page-link" href="?page={{ posts.previous_page_number }}{% if search_query %}&q={{ search_query }}{% endif %}{% if sort_by %}&sort={{ sort_by }}{% endif %}{% if time_filter %}&time={{ time_filter }}{% endif %}{% if min_likes %}&min_likes={{ min_likes }}{% endif %}">
+                    <i class="bi bi-chevron-left"></i>
+                </a>
+            </li>
+        {% endif %}
+        
+        {% for num in posts.paginator.page_range %}
+            {% if posts.number == num %}
+                <li class="page-item active">
+                    <span class="page-link">{{ num }}</span>
+                </li>
+            {% elif num > posts.number|add:'-3' and num < posts.number|add:'3' %}
+                <li class="page-item">
+                    <a class="page-link" href="?page={{ num }}{% if search_query %}&q={{ search_query }}{% endif %}{% if sort_by %}&sort={{ sort_by }}{% endif %}{% if time_filter %}&time={{ time_filter }}{% endif %}{% if min_likes %}&min_likes={{ min_likes }}{% endif %}">{{ num }}</a>
+                </li>
+            {% endif %}
+        {% endfor %}
+        
+        {% if posts.has_next %}
+            <li class="page-item">
+                <a class="page-link" href="?page={{ posts.next_page_number }}{% if search_query %}&q={{ search_query }}{% endif %}{% if sort_by %}&sort={{ sort_by }}{% endif %}{% if time_filter %}&time={{ time_filter }}{% endif %}{% if min_likes %}&min_likes={{ min_likes }}{% endif %}">
+                    <i class="bi bi-chevron-right"></i>
+                </a>
+            </li>
+            <li class="page-item">
+                <a class="page-link" href="?page={{ posts.paginator.num_pages }}{% if search_query %}&q={{ search_query }}{% endif %}{% if sort_by %}&sort={{ sort_by }}{% endif %}{% if time_filter %}&time={{ time_filter }}{% endif %}{% if min_likes %}&min_likes={{ min_likes }}{% endif %}">
+                    <i class="bi bi-chevron-double-right"></i>
+                </a>
+            </li>
+        {% endif %}
+    </ul>
+    
+    <div class="text-center text-muted">
+        <small>
+            Показано {{ posts.start_index }}-{{ posts.end_index }} из {{ posts.paginator.count }} тем
+        </small>
+    </div>
+</nav>
 {% endif %}
 
 <script>

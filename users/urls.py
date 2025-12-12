@@ -23,4 +23,19 @@ urlpatterns = [
     path('admin/users/<int:user_id>/unban/', admin_views.admin_unban_user, name='admin_unban_user'),
     path('admin/posts/<int:post_id>/delete/', admin_views.admin_delete_post, name='admin_delete_post'),
     path('admin/comments/<int:comment_id>/delete/', admin_views.admin_delete_comment, name='admin_delete_comment'),
+    
+    # Messages URLs
+    path('messages/', views.messages_list, name='messages_list'),
+    path('messages/send/', views.send_message, name='send_message'),
+    path('messages/send/<int:user_id>/', views.send_message, name='send_message_to_user'),
+    path('messages/conversation/<int:user_id>/', views.conversation, name='conversation'),
+    
+    # Reports URLs
+    path('report/post/<int:post_id>/', views.report_post, name='report_post'),
+    path('report/comment/<int:comment_id>/', views.report_comment, name='report_comment'),
+    path('report/user/<int:user_id>/', views.report_user, name='report_user'),
+    
+    # Admin Reports URLs
+    path('admin/reports/', admin_views.admin_reports, name='admin_reports'),
+    path('admin/reports/<int:report_id>/', admin_views.admin_report_detail, name='admin_report_detail'),
 ]

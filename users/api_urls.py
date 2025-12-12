@@ -1,14 +1,23 @@
 from django.urls import path
-from rest_framework_simplejwt.views import TokenBlacklistView
+from rest_framework_simplejwt.views import TokenObtainPairView, TokenRefreshView, TokenVerifyView
 from . import api_views
 
 urlpatterns = [
-    path('token/', api_views.CustomTokenObtainPairView.as_view(), name='token_obtain_pair'),
-    path('token/refresh/', api_views.CustomTokenRefreshView.as_view(), name='token_refresh'),
-    path('token/blacklist/', TokenBlacklistView.as_view(), name='token_blacklist'),
-    path('register/', api_views.register_api, name='register_api'),
-    path('profile/', api_views.user_profile_api, name='user_profile_api'),
-    path('profile/update/', api_views.update_profile_api, name='update_profile_api'),
-    path('logout/', api_views.logout_api, name='logout_api'),
+    # JWT Authentication endpoints
+    path('token/', TokenObtainPairView.as_view(), name='token_obtain_pair'),
+    path('token/refresh/', TokenRefreshView.as_view(), name='token_refresh'),
+    path('token/verify/', TokenVerifyView.as_view(), name='token_verify'),
+    path('token/refresh/custom/', api_views.token_refresh_api, name='api-token-refresh-custom'),
+    
+    # Custom authentication endpoints
+    path('register/', api_views.register_api, name='api-register'),
+    path('login/', api_views.login_api, name='api-login'),
+    path('logout/', api_views.logout_api, name='api-logout'),
+    
+    # User profile endpoints
+    path('profile/', api_views.profile_api, name='api-profile'),
+    path('profile/update/', api_views.update_profile_api, name='api-profile-update'),
+    
+    # Admin endpoints
+    path('admin/users/', api_views.admin_users_api, name='api-admin-users'),
 ]
-

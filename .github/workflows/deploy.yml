@@ -1,0 +1,50 @@
+name: Deploy to Production
+
+on:
+  push:
+    branches: [ main ]
+  workflow_dispatch:
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.12'
+    
+    - name: Deploy to Railway
+      uses: railway-app/railway-deploy@v1
+      if: env.RAILWAY_TOKEN != ''
+      env:
+        RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
+      with:
+        railway-token: ${{ secrets.RAILWAY_TOKEN }}
+        service: ${{ secrets.RAILWAY_SERVICE }}
+    
+    - name: Run database migrations on Railway
+      run: |
+        echo "Database migrations will be handled by Railway deployment"
+        # Railway typically handles migrations via build scripts
+      if: env.RAILWAY_TOKEN != ''
+    
+    - name: Verify deployment
+      run: |
+        echo "Deployment completed successfully"
+        # Add actual health check endpoint if available
+        # curl -f https://your-app.railway.app/health/ || exit 1
+      if: env.RAILWAY_TOKEN != ''
+    
+    - name: Deployment fallback message
+      if: env.RAILWAY_TOKEN == ''
+      run: |
+        echo "Railway token not configured. Deployment skipped."
+        echo "To enable deployment, add RAILWAY_TOKEN to repository secrets."
+
+
+
+

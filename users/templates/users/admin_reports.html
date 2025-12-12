@@ -1,0 +1,158 @@
+{% extends 'forum/base.html' %}
+{% load static %}
+
+{% block content %}
+<div class="row">
+    <div class="col-12">
+        <div class="card mb-4">
+            <div class="card-header">
+                <h4 class="mb-0">
+                    <i class="bi bi-flag"></i> Управление жалобами
+                </h4>
+            </div>
+            <div class="card-body">
+                <!-- Статистика -->
+                <div class="row mb-4">
+                    <div class="col-md-3">
+                        <div class="card stats-card text-center">
+                            <div class="card-body">
+                                <h5 class="text-warning">{{ stats.pending }}</h5>
+                                <small class="text-muted">Ожидают рассмотрения</small>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="card stats-card text-center">
+                            <div class="card-body">
+                                <h5 class="text-info">{{ stats.reviewed }}</h5>
+                                <small class="text-muted">Рассмотрено</small>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="card stats-card text-center">
+                            <div class="card-body">
+                                <h5 class="text-success">{{ stats.resolved }}</h5>
+                                <small class="text-muted">Решено</small>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="card stats-card text-center">
+                            <div class="card-body">
+                                <h5 class="text-secondary">{{ stats.dismissed }}</h5>
+                                <small class="text-muted">Отклонено</small>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Фильтр -->
+                <div class="mb-3">
+                    <form method="get" class="d-flex gap-2">
+                        <select name="status" class="form-select" style="max-width: 200px;" onchange="this.form.submit()">
+                            <option value="all" {% if status_filter == 'all' %}selected{% endif %}>Все статусы</option>
+                            <option value="pending" {% if status_filter == 'pending' %}selected{% endif %}>Ожидают рассмотрения</option>
+                            <option value="reviewed" {% if status_filter == 'reviewed' %}selected{% endif %}>Рассмотрено</option>
+                            <option value="resolved" {% if status_filter == 'resolved' %}selected{% endif %}>Решено</option>
+                            <option value="dismissed" {% if status_filter == 'dismissed' %}selected{% endif %}>Отклонено</option>
+                        </select>
+                    </form>
+                </div>
+                
+                <!-- Список жалоб -->
+                {% if reports %}
+                    <div class="table-responsive">
+                        <table class="table table-hover">
+                            <thead>
+                                <tr>
+                                    <th>ID</th>
+                                    <th>Тип</th>
+                                    <th>Жалобщик</th>
+                                    <th>Причина</th>
+                                    <th>Статус</th>
+                                    <th>Дата</th>
+                                    <th>Действия</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for report in reports %}
+                                    <tr>
+                                        <td>#{{ report.id }}</td>
+                                        <td>
+                                            {% if report.reported_post %}
+                                                <span class="badge bg-primary">Пост</span>
+                                            {% elif report.reported_comment %}
+                                                <span class="badge bg-info">Комментарий</span>
+                                            {% elif report.reported_user %}
+                                                <span class="badge bg-warning">Пользователь</span>
+                                            {% endif %}
+                                        </td>
+                                        <td>{{ report.reporter.get_full_name|default:report.reporter.username }}</td>
+                                        <td>{{ report.get_reason_display }}</td>
+                                        <td>
+                                            {% if report.status == 'pending' %}
+                                                <span class="badge bg-warning">Ожидает</span>
+                                            {% elif report.status == 'reviewed' %}
+                                                <span class="badge bg-info">Рассмотрено</span>
+                                            {% elif report.status == 'resolved' %}
+                                                <span class="badge bg-success">Решено</span>
+                                            {% elif report.status == 'dismissed' %}
+                                                <span class="badge bg-secondary">Отклонено</span>
+                                            {% endif %}
+                                        </td>
+                                        <td>{{ report.created_at|date:"d.m.Y H:i" }}</td>
+                                        <td>
+                                            <a href="{% url 'admin_report_detail' report.id %}" class="btn btn-sm btn-outline-primary">
+                                                <i class="bi bi-eye"></i> Просмотр
+                                            </a>
+                                        </td>
+                                    </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                    
+                    <!-- Пагинация -->
+                    {% if reports.has_other_pages %}
+                    <nav aria-label="Навигация по жалобам">
+                        <ul class="pagination justify-content-center">
+                            {% if reports.has_previous %}
+                                <li class="page-item">
+                                    <a class="page-link" href="?page={{ reports.previous_page_number }}{% if status_filter %}&status={{ status_filter }}{% endif %}">Предыдущая</a>
+                                </li>
+                            {% endif %}
+                            
+                            {% for num in reports.paginator.page_range %}
+                                {% if reports.number == num %}
+                                    <li class="page-item active">
+                                        <span class="page-link">{{ num }}</span>
+                                    </li>
+                                {% elif num > reports.number|add:'-3' and num < reports.number|add:'3' %}
+                                    <li class="page-item">
+                                        <a class="page-link" href="?page={{ num }}{% if status_filter %}&status={{ status_filter }}{% endif %}">{{ num }}</a>
+                                    </li>
+                                {% endif %}
+                            {% endfor %}
+                            
+                            {% if reports.has_next %}
+                                <li class="page-item">
+                                    <a class="page-link" href="?page={{ reports.next_page_number }}{% if status_filter %}&status={{ status_filter }}{% endif %}">Следующая</a>
+                                </li>
+                            {% endif %}
+                        </ul>
+                    </nav>
+                    {% endif %}
+                {% else %}
+                    <div class="text-center py-5">
+                        <i class="bi bi-flag text-muted" style="font-size: 4rem;"></i>
+                        <h4 class="text-muted mt-3">Жалоб нет</h4>
+                        <p class="text-muted">Все жалобы обработаны!</p>
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
